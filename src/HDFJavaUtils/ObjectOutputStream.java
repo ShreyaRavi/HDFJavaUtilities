@@ -77,6 +77,20 @@ public class ObjectOutputStream {
 		}
 	}
 	
+	public void writeBoolean(boolean val, String name) {
+		final H5Datatype typeFloat = new H5Datatype(HDF5Constants.H5T_NATIVE_FLOAT);
+		try {
+			long[] dims = {1, 1};
+			int[] data = {Boolean.compare(val, false)};
+			Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name, null, typeFloat, dims, null, null, 0, null);
+			int dataset_id = dset.open();
+			dset.write(data);
+			dset.close(dataset_id);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public void writeLong(long val, String name) {
 		final H5Datatype typeLong = new H5Datatype(HDF5Constants.H5T_NATIVE_LONG);
 		try {

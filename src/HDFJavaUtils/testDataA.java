@@ -10,6 +10,7 @@ public class testDataA {
 	public char[] charArrayTest;
 	public int[][] intArrayTest = {{1, 2}};
 	public String stringTest;
+	public boolean booleanTest;
 	
 	public testDataA(int val) {
 		integerTest = val;
@@ -17,6 +18,7 @@ public class testDataA {
 		doubleTest = val;
 		floatTest = val;
 		charTest = 'h';
+		booleanTest = true;
 		stringTest = "Hello World";
 		charArrayTest = ("Hello World").toCharArray();
 		shortTest = (short) val;
@@ -25,6 +27,7 @@ public class testDataA {
 	public testDataA() {
 		charArrayTest = new char[2];
 		stringTest = "";
+		booleanTest = false;
 	}
 	
 	public String toString() {
@@ -37,6 +40,7 @@ public class testDataA {
 		returnString += " char: " + charTest;
 		returnString += " charArray: " + charArrayTest;
 		returnString += " string: " + stringTest;
+		returnString += " boolean: " + booleanTest;
 		return returnString;
 	}
 }
