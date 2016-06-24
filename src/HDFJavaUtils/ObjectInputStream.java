@@ -57,6 +57,11 @@ public class ObjectInputStream {
 	public short readShort(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
+			short[] test = (short[]) dset.read();
+			dset.writeMetadata(4);
+			System.out.println(dset.getMetadata());
+			for(short i : test) 
+				System.out.print(i + ", ");
 			return  Array.getShort(dset.read(), 0);
 		} catch (Exception e) {
 			e.printStackTrace();

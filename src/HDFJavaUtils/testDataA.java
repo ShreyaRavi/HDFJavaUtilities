@@ -1,5 +1,8 @@
 package HDFJavaUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class testDataA {
 	public int integerTest;
 	public long longTest;
@@ -8,7 +11,8 @@ public class testDataA {
 	public short shortTest;
 	public char charTest;
 	public char[] charArrayTest;
-	public int[][] intArrayTest = {{1, 2}};
+	public int[] intArrayTest = {1, 12, 53, 45, 76};
+	public ArrayList<Integer> listTest = new ArrayList<Integer>();
 	public String stringTest;
 	public boolean booleanTest;
 	
@@ -18,6 +22,9 @@ public class testDataA {
 		doubleTest = val;
 		floatTest = val;
 		charTest = 'h';
+		listTest.add(4);
+		listTest.add(42);
+		listTest.add(12);
 		booleanTest = true;
 		stringTest = "Hello World";
 		charArrayTest = ("Hello World").toCharArray();
