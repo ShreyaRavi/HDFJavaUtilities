@@ -1,9 +1,10 @@
 package HDFJavaUtils;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-public class testDataA {
+public class testDataA implements HDF5Serializable{
 	public int integerTest;
 	public long longTest;
 	public double doubleTest;
@@ -39,15 +40,17 @@ public class testDataA {
 	
 	public String toString() {
 		String returnString = "";
-		returnString += "int: " + integerTest;
-		returnString += " long: " + longTest;
-		returnString += " double: " + doubleTest;
-		returnString += " float: " + floatTest;
-		returnString += " short: " + shortTest;
-		returnString += " char: " + charTest;
-		returnString += " charArray: " + charArrayTest;
-		returnString += " string: " + stringTest;
-		returnString += " boolean: " + booleanTest;
+	
+		System.out.println("Test Data");
+		Class<?> objClass = this.getClass();
+	    Field[] fields = objClass.getFields();
+	    for(Field field : fields) {
+	    	try {
+				returnString += " " + field.getType() + ": " + field.get(this) + "\n";
+			} catch (IllegalArgumentException | IllegalAccessException e) {
+				e.printStackTrace();
+			}
+	    }
 		return returnString;
 	}
 }

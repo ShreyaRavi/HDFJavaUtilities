@@ -108,34 +108,36 @@ public class ObjectOutputStream {
 	}
 	
 	public void writeObject(Object obj) {
-		Class<?> objClass = obj.getClass();
-	    Field[] fields = objClass.getFields();
-	    for(Field field : fields) {
-	    	try {
-	    		String type = field.get(obj).getClass().toString();
-	    		//System.out.println("class: " + type + " type: " + field.getType());
-		    	if(type.equals("class java.lang.Integer") || type.contains("[I")) 
-		    		writeInt(field.get(obj), field.getName());
-		    	else if(type.equals("class java.lang.Long")) 
-		    		writeLong(field.getLong(obj), field.getName());
-		    	else if(type.equals("class java.lang.Double")) 
-		    		writeDouble(field.getDouble(obj), field.getName());
-		    	else if(type.equals("class java.lang.Float")) 
-		    		writeFloat(field.getFloat(obj), field.getName());
-		    	else if(type.equals("class java.lang.Short")) 
-		    		writeShort(field.getShort(obj), field.getName());
-		    	else if(type.equals("class [C")) {
-		    		writeChar((char[]) field.get(obj), field.getName());
+	    if(obj instanceof HDF5Serializable) {
+			Class<?> objClass = obj.getClass();
+		    Field[] fields = objClass.getFields();
+		    for(Field field : fields) {
+		    	try {
+		    		String type = field.get(obj).getClass().toString();
+		    		//System.out.println("class: " + type + " type: " + field.getType());
+			    	if(type.equals("class java.lang.Integer") || type.contains("[I")) 
+			    		writeInt(field.get(obj), field.getName());
+			    	else if(type.equals("class java.lang.Long")) 
+			    		writeLong(field.getLong(obj), field.getName());
+			    	else if(type.equals("class java.lang.Double")) 
+			    		writeDouble(field.getDouble(obj), field.getName());
+			    	else if(type.equals("class java.lang.Float")) 
+			    		writeFloat(field.getFloat(obj), field.getName());
+			    	else if(type.equals("class java.lang.Short")) 
+			    		writeShort(field.getShort(obj), field.getName());
+			    	else if(type.equals("class [C")) {
+			    		writeChar((char[]) field.get(obj), field.getName());
+			    	}
+			    	else if(type.equals("class java.lang.Character")) 
+			    		writeChar(field.getChar(obj), field.getName());
+			    	else if(type.equals("class java.lang.String")) 
+			    		writeString(field.get(obj), field.getName());
+			    	else if(type.contains("List"))
+			    		writeIntList(field.get(obj), field.getName());
+		    	} catch(IllegalArgumentException | IllegalAccessException e) {
+		    		e.printStackTrace();
 		    	}
-		    	else if(type.equals("class java.lang.Character")) 
-		    		writeChar(field.getChar(obj), field.getName());
-		    	else if(type.equals("class java.lang.String")) 
-		    		writeString(field.get(obj), field.getName());
-		    	else if(type.contains("List"))
-		    		writeIntList(field.get(obj), field.getName());
-	    	} catch(IllegalArgumentException | IllegalAccessException e) {
-	    		e.printStackTrace();
-	    	}
+		    }
 	    }
 	}
 	
