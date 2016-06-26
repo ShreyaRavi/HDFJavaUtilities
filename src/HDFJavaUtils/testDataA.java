@@ -2,11 +2,13 @@ package HDFJavaUtils;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.List;
+
+import HDFJavaUtils.annotations.SerializeOptions;
 
 public class testDataA implements HDF5Serializable{
 	public int integerTest;
 	public long longTest;
+	@SerializeOptions(name = "test", ignore = true)
 	public double doubleTest;
 	public float floatTest;
 	public short shortTest;
@@ -16,7 +18,6 @@ public class testDataA implements HDF5Serializable{
 	public ArrayList<Integer> listTest = new ArrayList<Integer>();
 	public String stringTest;
 	public boolean booleanTest;
-	
 	public testDataA(int val) {
 		integerTest = val;
 		longTest = val;
@@ -53,4 +54,5 @@ public class testDataA implements HDF5Serializable{
 	    }
 		return returnString;
 	}
+
 }

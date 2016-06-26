@@ -1,10 +1,13 @@
 package HDFJavaUtils;
 
 import java.io.File;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.List;
 
+import HDFJavaUtils.annotations.SerializeOptions;
 import ncsa.hdf.hdf5lib.H5;
 import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.hdf5lib.exceptions.HDF5Exception;
@@ -111,32 +114,40 @@ public class ObjectOutputStream {
 	    if(obj instanceof HDF5Serializable) {
 			Class<?> objClass = obj.getClass();
 		    Field[] fields = objClass.getFields();
+		    boolean annotated = objClass.isAnnotationPresent(SerializeOptions.class);
+		    System.out.println(annotated);
+		    Annotation annotation = objClass.getAnnotation(SerializeOptions.class);
+		    SerializeOptions options = (SerializeOptions) annotation;
+		    System.out.println(options.ignore());
 		    for(Field field : fields) {
-		    	try {
-		    		String type = field.get(obj).getClass().toString();
-		    		//System.out.println("class: " + type + " type: " + field.getType());
-			    	if(type.equals("class java.lang.Integer") || type.contains("[I")) 
-			    		writeInt(field.get(obj), field.getName());
-			    	else if(type.equals("class java.lang.Long")) 
-			    		writeLong(field.getLong(obj), field.getName());
-			    	else if(type.equals("class java.lang.Double")) 
-			    		writeDouble(field.getDouble(obj), field.getName());
-			    	else if(type.equals("class java.lang.Float")) 
-			    		writeFloat(field.getFloat(obj), field.getName());
-			    	else if(type.equals("class java.lang.Short")) 
-			    		writeShort(field.getShort(obj), field.getName());
-			    	else if(type.equals("class [C")) {
-			    		writeChar((char[]) field.get(obj), field.getName());
+		    	if(!Modifier.isTransient(field.getModifiers())) {
+			    	try {
+			    		String type = field.get(obj).getClass().toString();
+			    		//System.out.println("class: " + type + " type: " + field.getType());
+				    	if(type.equals("class java.lang.Integer") || type.contains("[I")) 
+				    		writeInt(field.get(obj), field.getName());
+				    	else if(type.equals("class java.lang.Long")) 
+				    		writeLong(field.getLong(obj), field.getName());
+				    	else if(type.equals("class java.lang.Double")) 
+				    		writeDouble(field.getDouble(obj), field.getName());
+				    	else if(type.equals("class java.lang.Float")) 
+				    		writeFloat(field.getFloat(obj), field.getName());
+				    	else if(type.equals("class java.lang.Short")) 
+				    		writeShort(field.getShort(obj), field.getName());
+				    	else if(type.equals("class [C")) 
+				    		writeChar((char[]) field.get(obj), field.getName());
+				    	else if(type.equals("class java.lang.Character")) 
+				    		writeChar(field.getChar(obj), field.getName());
+				    	else if(type.equals("class java.lang.String")) 
+				    		writeString(field.get(obj), field.getName());
+				    	else if(type.contains("List")) {
+				    		System.out.println(field.getGenericType());
+				    		writeIntList(field.get(obj), field.getName());
+				    	}
+			    	} catch(IllegalArgumentException | IllegalAccessException | SecurityException e) {
+			    		e.printStackTrace();
 			    	}
-			    	else if(type.equals("class java.lang.Character")) 
-			    		writeChar(field.getChar(obj), field.getName());
-			    	else if(type.equals("class java.lang.String")) 
-			    		writeString(field.get(obj), field.getName());
-			    	else if(type.contains("List"))
-			    		writeIntList(field.get(obj), field.getName());
-		    	} catch(IllegalArgumentException | IllegalAccessException e) {
-		    		e.printStackTrace();
-		    	}
+			    }
 		    }
 	    }
 	}

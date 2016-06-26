@@ -1,10 +1,10 @@
 package HDFJavaUtils;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
 
+import HDFJavaUtils.annotations.SerializeOptions;
 import ncsa.hdf.object.Dataset;
 import ncsa.hdf.object.h5.H5File;
 
