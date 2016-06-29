@@ -11,7 +11,7 @@ public class testing {
 		ObjectInputStream in = new ObjectInputStream(file);
 		testDataA a = new testDataA(5);
 		testDataA b = new testDataA();
-		System.out.println(b.toString());
+		System.out.println(a.toString());
 		o.writeObject(a);
 		in.readObject(b);
 		System.out.println(b.toString());

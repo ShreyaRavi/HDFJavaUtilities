@@ -1,11 +1,13 @@
 package HDFJavaUtils;
 
-import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import HDFJavaUtils.annotations.SerializeOptions;
 import ncsa.hdf.hdf5lib.H5;
@@ -15,6 +17,7 @@ import ncsa.hdf.object.Dataset;
 import ncsa.hdf.object.Datatype;
 import ncsa.hdf.object.h5.H5Datatype;
 import ncsa.hdf.object.h5.H5File;
+import ncsa.hdf.object.h5.H5Group;
 import ncsa.hdf.object.h5.H5ScalarDS;
 
 public class ObjectOutputStream {
@@ -52,29 +55,43 @@ public class ObjectOutputStream {
 		}
 	}
 	
-	public void writeString(Object obj, String name) {
-			writeChar(((String) obj).toCharArray(), name);
+	public void writeString(String obj, String name) {
+		H5Datatype type = new H5Datatype(Datatype.CLASS_STRING, obj.length(), -1, -1);
+		long[] dims = {1};
+		String[] data = {obj};
+		writeData(type, data, dims, name);
 	}
 	
 	public void writeFloat(float val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_FLOAT);
 		float[] data = {val};
-		long[] dims = {1, 1};
+		long[] dims = {1};
 		writeData(type, data, dims, name);
 	}
 	
-	private void writeIntList(Object obj, String name) {
-		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_INT);
-		List<Integer> data = (List) obj;
-		int[] changed = new int[data.size()];
-		for(int i = 0; i<data.size(); i++) 
-			changed[i] = data.get(i);
-		long[] dims = {1, data.size()};
-		writeData(type, changed, dims, name);
+	private <T> void writeList(List list, String name, H5Datatype type) {
+		T[] data = (T[]) Array.newInstance(list.get(0).getClass(), list.size());
+		
+		for (int i = 0; i < list.size(); i++) 
+	        data[i] = (T) list.get(i);
+		long[] dims = {1, data.length};
+		writeData(type, data, dims, name);
+	}
+	
+	private <T> void writeSet(Set set, String name, H5Datatype type) {
+		T[] data = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
+		Iterator<T> it = set.iterator();
+		int count = 0;
+		while(it.hasNext()) {
+			data[count] = it.next();
+			count++;
+		}
+		long[] dims = {1, data.length};
+		writeData(type, data, dims, name);
 	}
 	
 	public void writeBoolean(boolean val, String name) {
-		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_INT);
+		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_HBOOL);
 		int[] data = {val ? 1 : 0};
 		long[] dims = {1, 1};
 		writeData(type, data, dims, name);
@@ -89,14 +106,14 @@ public class ObjectOutputStream {
 	
 	public void writeShort(short val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_SHORT);
-		short[] data = {(short) val};
+		short[] data = {val};
 		long[] dims = {1, 1};
 		writeData(type, data, dims, name);
 	}
 	
 	public void writeChar(char val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_CHAR);
-		int[] data = {(int) val};
+		int[] data = {val};
 		long[] dims = {1, 1};
 		writeData(type, data, dims, name);
 	}
@@ -110,39 +127,84 @@ public class ObjectOutputStream {
 		writeData(type, data, dims, name);
 	}
 	
+	private <T> void writeMap(Map map, String name, Field field) {
+		Set set = map.keySet();
+		T[] data = (T[]) Array.newInstance(map.get(set.toArray()[0]).getClass(), set.size());
+		long[] dims = {1, data.length};
+		String[] split = field.getGenericType().toString().split(",");
+		
+		T[] keyValues = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
+		Iterator<T> it = set.iterator();
+		int count = 0;
+		while(it.hasNext()) {
+			keyValues[count] = it.next();
+			data[count] = (T) map.get(keyValues[count]);
+			count++;
+		}	
+		
+		try {
+			H5Group group = (H5Group) file.createGroup("/" + name, null);
+			int group_id = group.open();
+			Dataset dsetKey = (H5ScalarDS) file.createScalarDS("/" + "key", group, getType(split[0]), dims, null, null, 0, null);
+			Dataset dset = (H5ScalarDS) file.createScalarDS("/" + "data", group, getType(split[1]), dims, null, null, 0, null);
+			int dataset_id_key = dsetKey.open();
+			int dataset_id_data = dset.open();
+			dset.write(data);
+			dsetKey.write(keyValues);
+			dsetKey.close(dataset_id_key);
+			dset.close(dataset_id_data);
+			group.close(group_id);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
 	public void writeObject(Object obj) {
 	    if(obj instanceof HDF5Serializable) {
 			Class<?> objClass = obj.getClass();
 		    Field[] fields = objClass.getFields();
-		    boolean annotated = objClass.isAnnotationPresent(SerializeOptions.class);
-		    System.out.println(annotated);
-		    Annotation annotation = objClass.getAnnotation(SerializeOptions.class);
-		    SerializeOptions options = (SerializeOptions) annotation;
-		    System.out.println(options.ignore());
 		    for(Field field : fields) {
-		    	if(!Modifier.isTransient(field.getModifiers())) {
+			    String name = "";
+			    long[] dims = {1, 1};
+			    boolean ignore = false;
+		    	Annotation anno = field.getAnnotation(SerializeOptions.class);
+		    	SerializeOptions options = (SerializeOptions) anno;
+		    	if(anno != null) {
+		    		name = options.name();
+		    		dims = options.dimensions();
+		    		ignore = options.ignore();
+		    	//	System.out.println(ignore);
+		    	}
+		    	if(!Modifier.isTransient(field.getModifiers()) && !ignore) {
 			    	try {
+			    		if(name == "") name = field.getName();
 			    		String type = field.get(obj).getClass().toString();
-			    		//System.out.println("class: " + type + " type: " + field.getType());
+			    		System.out.println("class: " + type + " type: " + field.getGenericType());
 				    	if(type.equals("class java.lang.Integer") || type.contains("[I")) 
-				    		writeInt(field.get(obj), field.getName());
+				    		writeInt(field.get(obj), name);
 				    	else if(type.equals("class java.lang.Long")) 
-				    		writeLong(field.getLong(obj), field.getName());
+				    		writeLong(field.getLong(obj), name);
 				    	else if(type.equals("class java.lang.Double")) 
-				    		writeDouble(field.getDouble(obj), field.getName());
+				    		writeDouble(field.getDouble(obj), name);
 				    	else if(type.equals("class java.lang.Float")) 
-				    		writeFloat(field.getFloat(obj), field.getName());
+				    		writeFloat(field.getFloat(obj), name);
 				    	else if(type.equals("class java.lang.Short")) 
-				    		writeShort(field.getShort(obj), field.getName());
+				    		writeShort(field.getShort(obj), name);
 				    	else if(type.equals("class [C")) 
-				    		writeChar((char[]) field.get(obj), field.getName());
+				    		writeChar((char[]) field.get(obj), name);
 				    	else if(type.equals("class java.lang.Character")) 
-				    		writeChar(field.getChar(obj), field.getName());
+				    		writeChar(field.getChar(obj), name);
 				    	else if(type.equals("class java.lang.String")) 
-				    		writeString(field.get(obj), field.getName());
+				    		writeString((String) field.get(obj), name);
+				    	else if(type.equals("class java.lang.Boolean"))
+				    		writeBoolean(field.getBoolean(obj), name);
 				    	else if(type.contains("List")) {
-				    		System.out.println(field.getGenericType());
-				    		writeIntList(field.get(obj), field.getName());
+				    	//	System.out.println(field.getGenericType());
+				    		writeList((List) field.get(obj), name, getType(field));
+				    	} else if(type.contains("Set")) {
+				    		writeSet((Set) field.get(obj), name, getType(field));
+				    	} else if(type.contains("Map")) {
+				    		writeMap((Map) field.get(obj), name, field);
 				    	}
 			    	} catch(IllegalArgumentException | IllegalAccessException | SecurityException e) {
 			    		e.printStackTrace();
@@ -159,6 +221,37 @@ public class ObjectOutputStream {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	private H5Datatype getType(Field field) {
+		String type = "" + field.getGenericType();
+		if(type.contains("Integer"))
+			return new H5Datatype(HDF5Constants.H5T_NATIVE_INT);
+		else if(type.contains("Char")) 
+			return new H5Datatype(HDF5Constants.H5T_NATIVE_CHAR);
+		else if(type.contains("Short"))
+			return new H5Datatype(HDF5Constants.H5T_NATIVE_SHORT);
+		else if(type.contains("Double"))
+			return new H5Datatype(HDF5Constants.H5T_NATIVE_DOUBLE);
+		else if(type.contains("Long"))
+			return new H5Datatype(HDF5Constants.H5T_NATIVE_LONG);
+		
+		return null;
+	}
+	
+	private H5Datatype getType(String type) {
+		if(type.contains("Integer"))
+			return new H5Datatype(HDF5Constants.H5T_NATIVE_INT);
+		else if(type.contains("Char")) 
+			return new H5Datatype(HDF5Constants.H5T_NATIVE_CHAR);
+		else if(type.contains("Short"))
+			return new H5Datatype(HDF5Constants.H5T_NATIVE_SHORT);
+		else if(type.contains("Double"))
+			return new H5Datatype(HDF5Constants.H5T_NATIVE_DOUBLE);
+		else if(type.contains("Long"))
+			return new H5Datatype(HDF5Constants.H5T_NATIVE_LONG);
+		
+		return null;
 	}
 	
 	private void writeData(Datatype type, Object data, long[] dims, String name) {
