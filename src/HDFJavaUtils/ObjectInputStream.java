@@ -20,8 +20,10 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import HDFJavaUtils.annotations.SerializeClassOptions;
-import HDFJavaUtils.annotations.SerializeFieldOptions;
+import HDFJavaUtils.interfaces.HDF5Serializable;
+import HDFJavaUtils.interfaces.Ignore;
+import HDFJavaUtils.interfaces.SerializeClassOptions;
+import HDFJavaUtils.interfaces.SerializeFieldOptions;
 import ncsa.hdf.object.Dataset;
 import ncsa.hdf.object.h5.H5File;
 
@@ -53,7 +55,6 @@ public class ObjectInputStream {
 	public Double readDouble(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
-			System.out.println(dset.read());
 			return Array.getDouble(dset.read(), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -155,12 +156,17 @@ public class ObjectInputStream {
 				return false;
 			return true;
 		} catch (Exception e) {
+			e.printStackTrace();
 			return false;
 		}
 	}
 
 	public void readObject(Object obj) {
 		readObjectHelper(obj, null);
+	}
+	
+	public void readObject(Object obj, String path) {
+		readObjectHelper(obj, path);
 	}
 
 	private <T> void readObjectHelper(Object obj, String group) {
@@ -170,7 +176,7 @@ public class ObjectInputStream {
 			String path = "";
 			SerializeClassOptions options = (SerializeClassOptions) objClass.getAnnotation(SerializeClassOptions.class);
 			if (group != null)
-				path += group;
+				path += group + "/";
 			if (options != null) {
 				path += options.path();
 				if (options.name().equals(""))
@@ -183,7 +189,6 @@ public class ObjectInputStream {
 			for (Field field : fields) {
 				String name = "";
 				long[] dims = { 1, 1 };
-				boolean ignore = false;
 				String localGroup = "";
 				Annotation anno = field.getAnnotation(SerializeFieldOptions.class);
 				SerializeFieldOptions fieldOptions = (SerializeFieldOptions) anno;
@@ -191,36 +196,36 @@ public class ObjectInputStream {
 					name = fieldOptions.name();
 					localGroup = fieldOptions.path();
 					dims = fieldOptions.dimensions();
-					ignore = fieldOptions.ignore();
 				}
-				if (!Modifier.isTransient(field.getModifiers()) && !ignore) {
+				if (!Modifier.isTransient(field.getModifiers()) && !field.isAnnotationPresent(Ignore.class)) {
 					try {
 						String type = field.get(obj).getClass().toString();
 						if (name == "")
 							name = field.getName();
 						name = defaultPath + "/" + path + "/" + localGroup + "/" + name;
-						if (field.get(obj).getClass().isPrimitive()) {
-							if (type.equals("class java.lang.Integer"))
-								field.setInt(obj, readInt(name));
-							else if (type.equals("class java.lang.Long"))
-								field.setLong(obj, readLong(name));
-							else if (type.equals("class java.lang.Double"))
-								field.setDouble(obj, readDouble(name));
-							else if (type.equals("class java.lang.Float"))
-								field.setFloat(obj, readFloat(name));
-							else if (type.equals("class java.lang.Short"))
-								field.setShort(obj, readShort(name));
-							else if (type.equals("class java.lang.Character"))
-								field.setChar(obj, readChar(name));
-							else if (type.equals("class [C"))
-								field.set(obj, readCharArray(name));
-							else if (type.equals("class java.lang.String"))
-								field.set(obj, readString(name));
-							else if (type.equals("[I"))
-								field.set(obj, readIntArray(name));
-						} else if (type.contains("List") || type.contains("Vector") || type.contains("stack")) {
+						if (type.equals("class java.lang.Integer"))
+							field.setInt(obj, readInt(name));
+						else if (type.equals("class java.lang.Long"))
+							field.setLong(obj, readLong(name));
+						else if (type.equals("class java.lang.Double"))
+							field.setDouble(obj, readDouble(name));
+						else if (type.equals("class java.lang.Float"))
+							field.setFloat(obj, readFloat(name));
+						else if (type.equals("class java.lang.Short"))
+							field.setShort(obj, readShort(name));
+						else if (type.equals("class java.lang.Character"))
+							field.setChar(obj, readChar(name));
+						else if (type.equals("class [C"))
+							field.set(obj, readCharArray(name));
+						else if (type.equals("class java.lang.String"))
+							field.set(obj, readString(name));
+						else if (type.equals("[I"))
+							field.set(obj, readIntArray(name));
+						else if (type.equals("class java.lang.Boolean")) {
+							field.set(obj, readBoolean(name)); 
+						}
+						else if (type.contains("List") || type.contains("Vector") || type.contains("stack")) {
 							List list = null;
-							System.out.println(type);
 							if (type.equals("class java.util.ArrayList"))
 								list = new ArrayList<T>();
 							else if (type.equals("class java.util.LinkedList"))
@@ -285,8 +290,9 @@ public class ObjectInputStream {
 							}
 							field.set(obj, map);
 
-						} else if (type.equals("class java.lang.Boolean"))
-							field.set(obj, readBoolean(field.getName()));
+						} else if(field.get(obj) instanceof HDF5Serializable && field.getDeclaringClass() != field.getClass()) {
+			    			readObjectHelper(field.get(obj), "/" + path + "/" + localGroup);
+			    		}
 					} catch (IllegalArgumentException | IllegalAccessException | NullPointerException e) {
 						e.printStackTrace();
 					}
