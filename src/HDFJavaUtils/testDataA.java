@@ -1,23 +1,28 @@
 package HDFJavaUtils;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import HDFJavaUtils.annotations.SerializeClassOptions;
+import HDFJavaUtils.annotations.SerializeFieldOptions;
+
+@SerializeClassOptions(path = "Hello", name = "Different Name")
 public class testDataA implements HDF5Serializable{
 	public int integerTest;
 	public long longTest;
+	@SerializeFieldOptions(path = "Hiding/Really well", name = "Other Name")
 	public double doubleTest;
 	public float floatTest;
 	public short shortTest;
 	public char charTest;
 	public char[] charArrayTest;
 	public int[] intArrayTest = {1, 12, 53, 45, 76};
-	public List<Integer> listTest = new ArrayList<Integer>();
+	public List<Integer> listTest = new LinkedList<Integer>();
 	public Set<Integer> setTest = new TreeSet<Integer>();
 	public Map<Integer, Double> mapTest = new HashMap<Integer, Double>();
 	public String stringTest;
@@ -50,7 +55,6 @@ public class testDataA implements HDF5Serializable{
 	
 	public String toString() {
 		String returnString = "";
-	//	System.out.println("manual: " + listTest.get(1));
 		System.out.println("Test Data");
 		Class<?> objClass = this.getClass();
 	    Field[] fields = objClass.getFields();

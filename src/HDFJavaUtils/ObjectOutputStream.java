@@ -9,7 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import HDFJavaUtils.annotations.SerializeOptions;
+import HDFJavaUtils.annotations.SerializeClassOptions;
+import HDFJavaUtils.annotations.SerializeFieldOptions;
 import ncsa.hdf.hdf5lib.H5;
 import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.hdf5lib.exceptions.HDF5Exception;
@@ -23,9 +24,18 @@ import ncsa.hdf.object.h5.H5ScalarDS;
 public class ObjectOutputStream {
 	
 	private H5File file;
+	private String defaultPath;
+	private String path;
 
 	public ObjectOutputStream(H5File file) {
 		this.file = file;
+		defaultPath = "";
+	}
+	
+	public ObjectOutputStream(H5File file, String groupPath) {
+		this.file = file;
+		defaultPath = groupPath;
+		createPath(groupPath, null);
 	}
 	
 	public void writeDouble(double val, String name) {
@@ -160,58 +170,82 @@ public class ObjectOutputStream {
 	}
 	
 	public void writeObject(Object obj) {
+		writeObjectHelper(obj, null);
+	}
+	
+	public void writeObject(Object obj, String group) {
+		writeObjectHelper(obj, group);
+	}
+	
+	private void writeObjectHelper(Object obj, String group) {
 	    if(obj instanceof HDF5Serializable) {
-			Class<?> objClass = obj.getClass();
-		    Field[] fields = objClass.getFields();
-		    for(Field field : fields) {
-			    String name = "";
-			    long[] dims = {1, 1};
-			    boolean ignore = false;
-		    	Annotation anno = field.getAnnotation(SerializeOptions.class);
-		    	SerializeOptions options = (SerializeOptions) anno;
-		    	if(anno != null) {
-		    		name = options.name();
-		    		dims = options.dimensions();
-		    		ignore = options.ignore();
-		    	//	System.out.println(ignore);
-		    	}
-		    	if(!Modifier.isTransient(field.getModifiers()) && !ignore) {
-			    	try {
-			    		if(name == "") name = field.getName();
-			    		String type = field.get(obj).getClass().toString();
-			    		System.out.println("class: " + type + " type: " + field.getGenericType());
-				    	if(type.equals("class java.lang.Integer") || type.contains("[I")) 
-				    		writeInt(field.get(obj), name);
-				    	else if(type.equals("class java.lang.Long")) 
-				    		writeLong(field.getLong(obj), name);
-				    	else if(type.equals("class java.lang.Double")) 
-				    		writeDouble(field.getDouble(obj), name);
-				    	else if(type.equals("class java.lang.Float")) 
-				    		writeFloat(field.getFloat(obj), name);
-				    	else if(type.equals("class java.lang.Short")) 
-				    		writeShort(field.getShort(obj), name);
-				    	else if(type.equals("class [C")) 
-				    		writeChar((char[]) field.get(obj), name);
-				    	else if(type.equals("class java.lang.Character")) 
-				    		writeChar(field.getChar(obj), name);
-				    	else if(type.equals("class java.lang.String")) 
-				    		writeString((String) field.get(obj), name);
-				    	else if(type.equals("class java.lang.Boolean"))
-				    		writeBoolean(field.getBoolean(obj), name);
-				    	else if(type.contains("List")) {
-				    	//	System.out.println(field.getGenericType());
-				    		writeList((List) field.get(obj), name, getType(field));
-				    	} else if(type.contains("Set")) {
-				    		writeSet((Set) field.get(obj), name, getType(field));
-				    	} else if(type.contains("Map")) {
-				    		writeMap((Map) field.get(obj), name, field);
-				    	}
-			    	} catch(IllegalArgumentException | IllegalAccessException | SecurityException e) {
-			    		e.printStackTrace();
+				Class<?> objClass = obj.getClass();
+			    Field[] fields = objClass.getFields();
+			    String path = "";
+			    SerializeClassOptions options = (SerializeClassOptions) objClass.getAnnotation(SerializeClassOptions.class);
+			    if(group != null)
+			    	path += group;
+			    if(options != null) {
+			    	path += options.path();
+			    	if(options.name().equals(""))
+			    		path += obj.getClass().getSimpleName();
+			    	else path += "/" + options.name();
+			    } else {
+			    	path += "/" + obj.getClass().getSimpleName();
+			    }
+			    createPath(path, defaultPath);
+			    for(Field field : fields) {
+				    String name = "";
+				    long[] dims = {1, 1};
+				    boolean ignore = false;
+				    String localGroup = "";
+			    	Annotation anno = field.getAnnotation(SerializeFieldOptions.class);
+			    	SerializeFieldOptions fieldOptions = (SerializeFieldOptions) anno;
+			    	if(anno != null) {
+			    		name = fieldOptions.name();
+			    		localGroup = fieldOptions.path();
+			    		dims = fieldOptions.dimensions();
+			    		ignore = fieldOptions.ignore();
 			    	}
+			    	if(!Modifier.isTransient(field.getModifiers()) && !ignore) {
+				    	try {
+				    		if(name == "") name = field.getName();
+				    		if(!localGroup.equals(""))
+				    			createPath(localGroup, defaultPath + "/" + path);
+				    		name = defaultPath + "/" + path + "/" + localGroup + "/" + name;
+				    		String type = field.get(obj).getClass().toString();
+//System.out.println("class: " + type + " type: " + field.getGenericType());
+					    	if(type.equals("class java.lang.Integer") || type.contains("[I")) 
+					    		writeInt(field.get(obj), name);
+					    	else if(type.equals("class java.lang.Long")) 
+					    		writeLong(field.getLong(obj), name);
+					    	else if(type.equals("class java.lang.Double")) 
+					    		writeDouble(field.getDouble(obj), name);
+					    	else if(type.equals("class java.lang.Float")) 
+					    		writeFloat(field.getFloat(obj), name);
+					    	else if(type.equals("class java.lang.Short")) 
+					    		writeShort(field.getShort(obj), name);
+					    	else if(type.equals("class [C")) 
+					    		writeChar((char[]) field.get(obj), name);
+					    	else if(type.equals("class java.lang.Character")) 
+					    		writeChar(field.getChar(obj), name);
+					    	else if(type.equals("class java.lang.String")) 
+					    		writeString((String) field.get(obj), name);
+					    	else if(type.equals("class java.lang.Boolean"))
+					    		writeBoolean(field.getBoolean(obj), name);
+					    	else if(type.contains("List")) {
+					    		writeList((List) field.get(obj), name, getType(field));
+					    	} else if(type.contains("Set")) {
+					    		writeSet((Set) field.get(obj), name, getType(field));
+					    	} else if(type.contains("Map")) {
+					    		writeMap((Map) field.get(obj), name, field);
+					    	}
+				    	} catch(IllegalArgumentException | IllegalAccessException | SecurityException e) {
+				    		e.printStackTrace();
+				    	}
+				    }
 			    }
 		    }
-	    }
 	}
 	
 	public void close() {
@@ -263,6 +297,22 @@ public class ObjectOutputStream {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	private void createPath(String path, String basePath) {
+		String[] groupPath = path.split("/");
+		String base = "";
+		if(basePath != null)
+			base = "/" + basePath + "/";
+		System.out.println("Length: " + groupPath.length);
+		for(String str : groupPath) {
+			try {
+				file.createGroup(base + str, null);
+				base += str + "/";
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}  
 	}
 	
 	//Unfinished
