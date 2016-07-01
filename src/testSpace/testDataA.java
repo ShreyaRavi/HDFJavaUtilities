@@ -20,15 +20,13 @@ public class testDataA implements HDF5Serializable{
 	@SerializeFieldOptions(path = "Hiding/Really well", name = "Other Name", dimensions = {1, 1})
 	public double doubleTest;
 	public float floatTest;
-	public transient short shortTest;
+	public short shortTest;
 	public char charTest;
-	public char[] charArrayTest;
 	public int[] intArrayTest = {1, 12, 53, 45, 76};
 	public List<Integer> listTest = new LinkedList<Integer>();
 	public Set<Integer> setTest = new TreeSet<Integer>();
 	public Map<Integer, Double> mapTest = new HashMap<Integer, Double>();
 	public String stringTest;
-	@Ignore
 	public boolean booleanTest;
 	public testDataB subclassTest = new testDataB();
 
@@ -49,12 +47,10 @@ public class testDataA implements HDF5Serializable{
 		mapTest.put(3, 3.141592);
 		booleanTest = true;
 		stringTest = "Hello World";
-		charArrayTest = ("Hello World").toCharArray();
 		shortTest = (short) val;
 	}
 	
 	public testDataA() {
-		charArrayTest = new char[2];
 		stringTest = "";
 		booleanTest = false;
 	}

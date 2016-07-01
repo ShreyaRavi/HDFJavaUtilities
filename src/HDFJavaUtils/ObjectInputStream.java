@@ -27,21 +27,40 @@ import HDFJavaUtils.interfaces.SerializeFieldOptions;
 import ncsa.hdf.object.Dataset;
 import ncsa.hdf.object.h5.H5File;
 
+/**
+ * The HDF5Util's ObjectOutputStream is a mirror to Java's ObjectInputStream
+ * The program gives the user tools to de-serialize a class from a HDF5 file
+ * @author Ben Bressette
+ * @version 0.1
+ */
 public class ObjectInputStream {
 
 	private H5File file;
 	private String defaultPath;
 
+	/**
+	 * Constructor for the class, the user is required to input a H5File
+	 * @param file The H5File being accessed within the program
+	 */
 	public ObjectInputStream(H5File file) {
 		this.file = file;
 		defaultPath = "";
 	}
 
+	/**
+	 * Constructor for the class, the user is required to input a H5File
+	 * @param file The H5File being accessed within the program
+	 * @param groupPath represents the root directory the program will use in the file
+	 */
 	public ObjectInputStream(H5File file, String path) {
 		this.file = file;
 		defaultPath = path;
 	}
 
+	/**
+	 * Reads an integer from a dataset
+	 * @param name The name of the dataset
+	 */
 	public int readInt(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
@@ -52,6 +71,10 @@ public class ObjectInputStream {
 		}
 	}
 
+	/**
+	 * Reads a double from a dataset
+	 * @param name The name of the dataset
+	 */
 	public Double readDouble(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
@@ -62,6 +85,10 @@ public class ObjectInputStream {
 		}
 	}
 
+	/**
+	 * Reads a float from a dataset
+	 * @param name The name of the dataset
+	 */
 	public float readFloat(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
@@ -72,6 +99,10 @@ public class ObjectInputStream {
 		}
 	}
 
+	/**
+	 * Reads a long from a dataset
+	 * @param name The name of the dataset
+	 */
 	public long readLong(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
@@ -82,6 +113,10 @@ public class ObjectInputStream {
 		}
 	}
 
+	/**
+	 * Reads a short from a dataset
+	 * @param name The name of the dataset
+	 */
 	public short readShort(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
@@ -92,6 +127,10 @@ public class ObjectInputStream {
 		}
 	}
 
+	/**
+	 * Reads a character from a dataset
+	 * @param name The name of the dataset
+	 */
 	public char readChar(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
@@ -102,6 +141,10 @@ public class ObjectInputStream {
 		}
 	}
 
+	/**
+	 * Reads an character array from a dataset
+	 * @param name The name of the dataset
+	 */
 	public char[] readCharArray(String name) {
 		String array = "";
 		try {
@@ -117,17 +160,10 @@ public class ObjectInputStream {
 		}
 	}
 
-	public int[] readIntArray(String name) {
-		try {
-			Dataset dset = (Dataset) file.get(name);
-			return (int[]) dset.read();
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-
-	}
-
+	/**
+	 * Reads a String from a dataset
+	 * @param name The name of the dataset
+	 */
 	public String readString(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
@@ -138,6 +174,10 @@ public class ObjectInputStream {
 		}
 	}
 
+	/**
+	 * Reads a generic object from a dataset
+	 * @param name The name of the dataset
+	 */
 	public <T> Object read(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
@@ -148,6 +188,10 @@ public class ObjectInputStream {
 		}
 	}
 
+	/**
+	 * Reads a boolean from a dataset
+	 * @param name The name of the dataset
+	 */
 	public boolean readBoolean(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
@@ -161,14 +205,41 @@ public class ObjectInputStream {
 		}
 	}
 
+	/**
+	 * Acts similar to Java's readObject function.
+	 * Will read basic data from a H5File and deserialize it to the object
+	 * Object must be implementing the HDF5Serializable interface
+	 * Any field with the transient tag will be ignored
+	 * @param obj The object to be serialized 
+	 */
 	public void readObject(Object obj) {
 		readObjectHelper(obj, null);
 	}
 	
+	/**
+	 * Acts similar to Java's readObject function.
+	 * Will read basic data from a H5File and deserialize it to the object
+	 * Object must be implementing the HDF5Serializable interface
+	 * Any field with the transient tag will be ignored
+	 * @param obj The object to be serialized 
+	 * @param path The location of the datasets
+	 */
 	public void readObject(Object obj, String path) {
 		readObjectHelper(obj, path);
 	}
 
+	private int[] readIntArray(String name) {
+		try {
+			Dataset dset = (Dataset) file.get(name);
+			return (int[]) dset.read();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	
+	}
+
+	//Reads the actual Object
 	private <T> void readObjectHelper(Object obj, String group) {
 		if (obj instanceof HDF5Serializable) {
 			Class<?> objClass = obj.getClass();

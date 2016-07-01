@@ -4,6 +4,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,6 @@ import ncsa.hdf.object.h5.H5ScalarDS;
  * The program gives the user tools to serialize a class to a HDF file
  * @author Ben Bressette
  * @version 0.1
- * @since 2016-6-30
  */
 public class ObjectOutputStream {
 	
@@ -58,8 +58,8 @@ public class ObjectOutputStream {
 	/**
 	 * Creates a new dataset and writes a single
 	 * Double value to it
-	 * @param val he value being written to a dataset
-	 * @param name  the name of the dataset
+	 * @param val The value being written to a dataset
+	 * @param name The name of the dataset
 	 */
 	public void writeDouble(double val, String name) {
 		final H5Datatype typeDouble = new H5Datatype(HDF5Constants.H5T_NATIVE_DOUBLE);
@@ -78,27 +78,21 @@ public class ObjectOutputStream {
 	/**
 	 * Creates a new dataset and writes a single
 	 * Integer value to it
-	 * @param val he value being written to a dataset
-	 * @param name  the name of the dataset
+	 * @param val The value being written to a dataset
+	 * @param name The name of the dataset
 	 */
 	public void writeInt(Object obj, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_INT);
-		if(obj.getClass().isArray()) {
-			int[] data = (int[]) obj;
-			long[] dims = {1, data.length};
-			writeData(type, obj, dims, name);
-		} else {
-			int[] data = {(int) obj};
-			long[] dims = {1, 1};
-			writeData(type, data, dims, name);
-		}
+		int[] data = {(int) obj};
+		long[] dims = {1, 1};
+		writeData(type, data, dims, name);
 	}
 	
 	/**
 	 * Creates a new dataset and writes a single
 	 * String object to it
-	 * @param val he value being written to a dataset
-	 * @param name  the name of the dataset
+	 * @param val The value being written to a dataset
+	 * @param name The name of the dataset
 	 */
 	public void writeString(String obj, String name) {
 		H5Datatype type = new H5Datatype(Datatype.CLASS_STRING, obj.length(), -1, -1);
@@ -110,8 +104,8 @@ public class ObjectOutputStream {
 	/**
 	 * Creates a new dataset and writes a single
 	 * Integer value to it
-	 * @param val he value being written to a dataset
-	 * @param name  the name of the dataset
+	 * @param val The value being written to a dataset
+	 * @param name The name of the dataset
 	 */
 	public void writeFloat(float val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_FLOAT);
@@ -123,8 +117,8 @@ public class ObjectOutputStream {
 	/**
 	 * Creates a new dataset and writes a single
 	 * Boolean value to it
-	 * @param val he value being written to a dataset
-	 * @param name  the name of the dataset
+	 * @param val The value being written to a dataset
+	 * @param name The name of the dataset
 	 */
 	public void writeBoolean(boolean val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_HBOOL);
@@ -136,8 +130,8 @@ public class ObjectOutputStream {
 	/**
 	 * Creates a new dataset and writes a single
 	 * Long value to it
-	 * @param val he value being written to a dataset
-	 * @param name  the name of the dataset
+	 * @param val The value being written to a dataset
+	 * @param name The name of the dataset
 	 */
 	public void writeLong(long val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_LONG);
@@ -149,8 +143,8 @@ public class ObjectOutputStream {
 	/**
 	 * Creates a new dataset and writes a single
 	 * Short value to it
-	 * @param val he value being written to a dataset
-	 * @param name  the name of the dataset
+	 * @param val The value being written to a dataset
+	 * @param name The name of the dataset
 	 */
 	public void writeShort(short val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_SHORT);
@@ -162,8 +156,8 @@ public class ObjectOutputStream {
 	/**
 	 * Creates a new dataset and writes a single
 	 * Character value to it
-	 * @param val he value being written to a dataset
-	 * @param name  the name of the dataset
+	 * @param val The value being written to a dataset
+	 * @param name The name of the dataset
 	 */
 	public void writeChar(char val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_CHAR);
@@ -175,8 +169,8 @@ public class ObjectOutputStream {
 	/**
 	 * Creates a new dataset and writes a single
 	 * Character array to it
-	 * @param val he value being written to a dataset
-	 * @param name  the name of the dataset
+	 * @param val The value being written to a dataset
+	 * @param name The name of the dataset
 	 */
 	public void writeChar(char[] val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_INT);
@@ -210,60 +204,83 @@ public class ObjectOutputStream {
 		writeObjectHelper(obj, path + "/");
 	}
 
-	private <T> void writeList(List list, String name, H5Datatype type) {
-		T[] data = (T[]) Array.newInstance(list.get(0).getClass(), list.size());
-		
-		for (int i = 0; i < list.size(); i++) 
-	        data[i] = (T) list.get(i);
-		long[] dims = {1, data.length};
-		writeData(type, data, dims, name);
-	}
-
-	private <T> void writeSet(Set set, String name, H5Datatype type) {
-		T[] data = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
-		Iterator<T> it = set.iterator();
-		int count = 0;
-		while(it.hasNext()) {
-			data[count] = it.next();
-			count++;
+	/**
+	 * Closes the H5 file.
+	 * Run this function when no longer in use
+	 */
+	public void close() {
+		try {
+			file.close();
+		} catch (HDF5Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		long[] dims = {1, data.length};
-		writeData(type, data, dims, name);
 	}
 
+	//Writes a list to a dataset
+	private <T> void writeList(List list, String name, H5Datatype type) {
+		if(type != null) {
+			T[] data = (T[]) Array.newInstance(list.get(0).getClass(), list.size());
+			for (int i = 0; i < list.size(); i++) 
+		        data[i] = (T) list.get(i);
+			long[] dims = {1, data.length};
+			writeData(type, data, dims, name);
+		}
+	}
+
+	//writes a set to a dataset
+	private <T> void writeSet(Set set, String name, H5Datatype type) {
+		if(type != null) {
+			T[] data = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
+			Iterator<T> it = set.iterator();
+			int count = 0;
+			while(it.hasNext()) {
+				data[count] = it.next();
+				count++;
+			}
+			long[] dims = {1, data.length};
+			writeData(type, data, dims, name);
+		}
+	}
+
+	//Writes a map to a dataset
 	private <T> void writeMap(Map map, String name, Field field) {
 		Set set = map.keySet();
 		T[] data = (T[]) Array.newInstance(map.get(set.toArray()[0]).getClass(), set.size());
 		long[] dims = {1, data.length};
 		String[] split = field.getGenericType().toString().split(",");
-		
-		T[] keyValues = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
-		Iterator<T> it = set.iterator();
-		int count = 0;
-		while(it.hasNext()) {
-			keyValues[count] = it.next();
-			data[count] = (T) map.get(keyValues[count]);
-			count++;
-		}	
-		
-		try {
-			H5Group group = (H5Group) file.createGroup("/" + name, null);
-			int group_id = group.open();
-			Dataset dsetKey = (H5ScalarDS) file.createScalarDS("/" + "key", group, getType(split[0]), dims, null, null, 0, null);
-			Dataset dset = (H5ScalarDS) file.createScalarDS("/" + "data", group, getType(split[1]), dims, null, null, 0, null);
-			int dataset_id_key = dsetKey.open();
-			int dataset_id_data = dset.open();
-			dset.write(data);
-			dsetKey.write(keyValues);
-			dsetKey.close(dataset_id_key);
-			dset.close(dataset_id_data);
-			group.close(group_id);
-		} catch (Exception e) {
-			e.printStackTrace();
+		H5Datatype typeKey = getType(split[0]);
+		H5Datatype typeData = getType(split[1]);
+		if(typeKey != null && typeData != null) {
+			T[] keyValues = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
+			Iterator<T> it = set.iterator();
+			int count = 0;
+			while(it.hasNext()) {
+				keyValues[count] = it.next();
+				data[count] = (T) map.get(keyValues[count]);
+				count++;
+			}	
+			
+			try {
+				H5Group group = (H5Group) file.createGroup("/" + name, null);
+				int group_id = group.open();
+				Dataset dsetKey = (H5ScalarDS) file.createScalarDS("/" + "key", group, getType(split[0]), dims, null, null, 0, null);
+				Dataset dset = (H5ScalarDS) file.createScalarDS("/" + "data", group, getType(split[1]), dims, null, null, 0, null);
+				int dataset_id_key = dsetKey.open();
+				int dataset_id_data = dset.open();
+				dset.write(data);
+				dsetKey.write(keyValues);
+				dsetKey.close(dataset_id_key);
+				dset.close(dataset_id_data);
+				group.close(group_id);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
-	private void writeObjectHelper(Object obj, String group) {
+	//Writes the actual object to file
+	private <T> void writeObjectHelper(Object obj, String group) {
 	    if(obj instanceof HDF5Serializable) {
 				Class<?> objClass = obj.getClass();
 			    Field[] fields = objClass.getFields();
@@ -299,9 +316,8 @@ public class ObjectOutputStream {
 				    		name = defaultPath + "/" + path + "/" + localGroup + "/" + name;
 				    		String type = field.get(obj).getClass().toString();
 //System.out.println("class: " + type + " type: " + field.getGenericType());
-					    	if(type.equals("class java.lang.Integer") || type.contains("[I")) {
+				    		if(type.equals("class java.lang.Integer")) 
 					    		writeInt(field.get(obj), name);
-					    	}
 					    	else if(type.equals("class java.lang.Long")) 
 					    		writeLong(field.getLong(obj), name);
 					    	else if(type.equals("class java.lang.Double")) 
@@ -310,13 +326,11 @@ public class ObjectOutputStream {
 					    		writeFloat(field.getFloat(obj), name);
 					    	else if(type.equals("class java.lang.Short")) 
 					    		writeShort(field.getShort(obj), name);
-					    	else if(type.equals("class [C")) 
-					    		writeChar((char[]) field.get(obj), name);
 					    	else if(type.equals("class java.lang.Character")) 
 					    		writeChar(field.getChar(obj), name);
 					    	else if(type.equals("class java.lang.String")) 
 					    		writeString((String) field.get(obj), name);
-					    	else if(type.equals("class java.lang.Boolean")) 
+					    	else if(type.equals("class java.lang.Boolean"))
 					    		writeBoolean(field.getBoolean(obj), name);
 					    	else if(type.contains("List")) {
 					    		writeList((List) field.get(obj), name, getType(field));
@@ -335,19 +349,6 @@ public class ObjectOutputStream {
 		    }
 	}
 	
-	/**
-	 * Closes the H5 file.
-	 * Run this function when no longer in use
-	 */
-	public void close() {
-		try {
-			file.close();
-		} catch (HDF5Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
 	//Returns the H5Datatype based on a field
 	private H5Datatype getType(Field field) {
 		String type = "" + field.getGenericType();
@@ -361,6 +362,8 @@ public class ObjectOutputStream {
 			return new H5Datatype(HDF5Constants.H5T_NATIVE_DOUBLE);
 		else if(type.contains("Long"))
 			return new H5Datatype(HDF5Constants.H5T_NATIVE_LONG);
+		else if(type.contains("["))
+			return new H5Datatype(HDF5Constants.H5T_ARRAY);
 		
 		return null;
 	}
@@ -380,7 +383,6 @@ public class ObjectOutputStream {
 		
 		return null;
 	}
-	
 	
 	//Creates a dataset and writes data to it
 	private void writeData(Datatype type, Object data, long[] dims, String name) {
