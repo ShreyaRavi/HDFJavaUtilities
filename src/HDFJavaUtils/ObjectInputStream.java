@@ -20,12 +20,15 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import ncsa.hdf.hdf5lib.H5;
+import ncsa.hdf.hdf5lib.HDF5Constants;
+import ncsa.hdf.object.Attribute;
+import ncsa.hdf.object.Dataset;
+import ncsa.hdf.object.h5.H5File;
 import HDFJavaUtils.interfaces.HDF5Serializable;
 import HDFJavaUtils.interfaces.Ignore;
 import HDFJavaUtils.interfaces.SerializeClassOptions;
 import HDFJavaUtils.interfaces.SerializeFieldOptions;
-import ncsa.hdf.object.Dataset;
-import ncsa.hdf.object.h5.H5File;
 
 /**
  * The HDF5Util's ObjectOutputStream is a mirror to Java's ObjectInputStream
@@ -34,7 +37,7 @@ import ncsa.hdf.object.h5.H5File;
  * @version 0.1
  */
 public class ObjectInputStream {
-
+	
 	private H5File file;
 	private String defaultPath;
 
@@ -64,13 +67,12 @@ public class ObjectInputStream {
 	public int readInt(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
-			return Array.getInt(dset.read(), 0);
+			return  Array.getInt(dset.read(), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return -1;
 		}
 	}
-
 	/**
 	 * Reads a double from a dataset
 	 * @param name The name of the dataset
@@ -84,7 +86,7 @@ public class ObjectInputStream {
 			return -1.0;
 		}
 	}
-
+	
 	/**
 	 * Reads a float from a dataset
 	 * @param name The name of the dataset
@@ -92,7 +94,7 @@ public class ObjectInputStream {
 	public float readFloat(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
-			return Array.getFloat(dset.read(), 0);
+			return  Array.getFloat(dset.read(), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return -1;
@@ -106,7 +108,7 @@ public class ObjectInputStream {
 	public long readLong(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
-			return Array.getLong(dset.read(), 0);
+			return  Array.getLong(dset.read(), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return -1;
@@ -120,7 +122,7 @@ public class ObjectInputStream {
 	public short readShort(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
-			return Array.getShort(dset.read(), 0);
+			return  Array.getShort(dset.read(), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return -1;
@@ -134,7 +136,7 @@ public class ObjectInputStream {
 	public char readChar(String name) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
-			return (char) Array.getInt(dset.read(), 0);
+			return  (char) Array.getInt(dset.read(), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return ' ';
@@ -150,7 +152,7 @@ public class ObjectInputStream {
 		try {
 			Dataset dset = (Dataset) file.get(name);
 			int[] intArray = (int[]) dset.getData();
-			for (int i : intArray) {
+			for(int i : intArray) {
 				array += (char) i;
 			}
 			return array.toCharArray();
@@ -159,6 +161,34 @@ public class ObjectInputStream {
 			return null;
 		}
 	}
+	
+	public Object readArray(String name, Field field, int HDF5Datatype, Class<?> datatype) {
+		try {
+			Dataset dset = (Dataset) file.get(name);
+			int dset_id = dset.open();
+			int filetype_id = H5.H5Dget_type(dset_id);
+			
+			List<Attribute> listAttributes = dset.getMetadata();
+			long[] dimensions = listAttributes.get(0).getDataDims();
+			long[] adims = new long[dimensions.length - 1];
+			for (int i = 1; i < dimensions.length; i++) {
+				adims[i-1] = dimensions[i];
+			}
+			int memtype_id = H5.H5Tarray_create(HDF5Datatype, (dimensions.length - 1), adims);
+			int[] intDims = new int[dimensions.length];
+			for (int i = 0; i < dimensions.length; i++) {
+				intDims[i] = Long.valueOf(dimensions[i]).intValue();
+			}
+			Object arr = Array.newInstance(datatype, intDims);
+			H5.H5Dread(dset_id, memtype_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
+			return arr;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+		
+	}
+	
 
 	/**
 	 * Reads a String from a dataset
@@ -173,6 +203,7 @@ public class ObjectInputStream {
 			return null;
 		}
 	}
+	
 
 	/**
 	 * Reads a generic object from a dataset
@@ -187,6 +218,7 @@ public class ObjectInputStream {
 			return null;
 		}
 	}
+	
 
 	/**
 	 * Reads a boolean from a dataset
@@ -196,14 +228,15 @@ public class ObjectInputStream {
 		try {
 			Dataset dset = (Dataset) file.get(name);
 			int[] data = (int[]) dset.read();
-			if (data[0] == 0)
+			if(data[0] == 0)
 				return false;
 			return true;
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch(Exception e) {
 			return false;
 		}
 	}
+	
+	
 
 	/**
 	 * Acts similar to Java's readObject function.
@@ -371,5 +404,6 @@ public class ObjectInputStream {
 			}
 		}
 	}
-
+	
+	
 }
