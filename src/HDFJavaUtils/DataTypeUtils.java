@@ -44,6 +44,7 @@ public class DataTypeUtils {
 //			return null;
 		}
 		
+		// TODO: include rest of types (byte, float)
 		public static int getDataType(String type, boolean isPrimitive) {
 			if (isPrimitive) {
 				if (type.contains("I")) {
@@ -58,7 +59,7 @@ public class DataTypeUtils {
 				} else if (type.contains("D")) {
 					arrType = Double.TYPE;
 					return HDF5Constants.H5T_NATIVE_DOUBLE;
-				} else if (type.contains("L")) {
+				} else if (type.contains("J")) {
 					arrType = Long.TYPE;
 					return HDF5Constants.H5T_NATIVE_LONG;
 				} else {

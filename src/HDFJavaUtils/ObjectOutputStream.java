@@ -92,6 +92,8 @@ public class ObjectOutputStream {
 		writeData(type, data, dims, name);
 	}
 
+	// TODO: support arrays of Objects 
+	// TODO: support arrays of wrapper classes (Integer, Long, etc.)
 	public void writeArray(long[] dimensions, Object obj, String name, int HDF5Datatype) {
 		
 		final H5Datatype type = new H5Datatype(HDF5Datatype);
@@ -398,13 +400,13 @@ public class ObjectOutputStream {
 							writeObjectHelper(field.get(obj), "/" + path + "/" + localGroup);
 						} else if (type.contains("[")) {
 							long[] dimens;
-							if (type.contains("[[[[I")) {
+							if (type.contains("[[[[")) {
 								dimens = new long[4];
 								dimens[0] = 4;
 								dimens[1] = 3;
 								dimens[2] = 2;
 								dimens[3] = 2;
-							} else if (type.contains("[I")){
+							} else if (type.contains("[")){
 								dimens = new long[1];
 								dimens[0] = 5;
 							} else {
