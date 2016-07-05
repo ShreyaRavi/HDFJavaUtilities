@@ -399,6 +399,7 @@ public class ObjectOutputStream {
 						} else if (field.get(obj) instanceof HDF5Serializable && field.getDeclaringClass() != field.getClass()) {
 							writeObjectHelper(field.get(obj), "/" + path + "/" + localGroup);
 						} else if (type.contains("[")) {
+							// TODO: Delete this and get dimensions from annotations
 							long[] dimens;
 							if (type.contains("[[[[")) {
 								dimens = new long[4];
