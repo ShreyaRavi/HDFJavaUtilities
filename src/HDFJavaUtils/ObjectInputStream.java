@@ -66,8 +66,7 @@ public class ObjectInputStream {
 	 */
 	public int readInt(String name) {
 		try {
-			Dataset dset = (Dataset) file.get(name);
-			return  Array.getInt(dset.read(), 0);
+			return  Array.getInt(read(name), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return -1;
@@ -79,8 +78,7 @@ public class ObjectInputStream {
 	 */
 	public Double readDouble(String name) {
 		try {
-			Dataset dset = (Dataset) file.get(name);
-			return Array.getDouble(dset.read(), 0);
+			return Array.getDouble(read(name), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return -1.0;
@@ -93,8 +91,7 @@ public class ObjectInputStream {
 	 */
 	public float readFloat(String name) {
 		try {
-			Dataset dset = (Dataset) file.get(name);
-			return  Array.getFloat(dset.read(), 0);
+			return  Array.getFloat(read(name), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return -1;
@@ -107,8 +104,7 @@ public class ObjectInputStream {
 	 */
 	public long readLong(String name) {
 		try {
-			Dataset dset = (Dataset) file.get(name);
-			return  Array.getLong(dset.read(), 0);
+			return  Array.getLong(read(name), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return -1;
@@ -121,8 +117,7 @@ public class ObjectInputStream {
 	 */
 	public short readShort(String name) {
 		try {
-			Dataset dset = (Dataset) file.get(name);
-			return  Array.getShort(dset.read(), 0);
+			return  Array.getShort(read(name), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return -1;
@@ -135,8 +130,8 @@ public class ObjectInputStream {
 	 */
 	public char readChar(String name) {
 		try {
-			Dataset dset = (Dataset) file.get(name);
-			return  (char) Array.getInt(dset.read(), 0);
+			return  (char) Array.getInt(read(name), 0);
+//			return Array.getChar(read(name), 0);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return ' ';
@@ -162,25 +157,22 @@ public class ObjectInputStream {
 		}
 	}
 	
-	public Object readArray(String name, Field field, int HDF5Datatype, Class<?> datatype) {
+	public Object readArray(String name, int HDF5Datatype, Class<?> datatype) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
 			int dset_id = dset.open();
-			int filetype_id = H5.H5Dget_type(dset_id);
 			
-			List<Attribute> listAttributes = dset.getMetadata();
-			long[] dimensions = listAttributes.get(0).getDataDims();
-			long[] adims = new long[dimensions.length - 1];
-			for (int i = 1; i < dimensions.length; i++) {
-				adims[i-1] = dimensions[i];
-			}
-			int memtype_id = H5.H5Tarray_create(HDF5Datatype, (dimensions.length - 1), adims);
+			// must call dset.getMetadata() before calling dset.getDims() because dims are metadata
+			dset.getMetadata();
+			long[] dimensions = dset.getDims();
+			
 			int[] intDims = new int[dimensions.length];
 			for (int i = 0; i < dimensions.length; i++) {
 				intDims[i] = Long.valueOf(dimensions[i]).intValue();
 			}
 			Object arr = Array.newInstance(datatype, intDims);
-			H5.H5Dread(dset_id, memtype_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
+			H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
+			dset.close(dset_id);
 			return arr;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -323,12 +315,12 @@ public class ObjectInputStream {
 							field.set(obj, readCharArray(name));
 						else if (type.equals("class java.lang.String"))
 							field.set(obj, readString(name));
-						else if (type.equals("[I"))
-							field.set(obj, readIntArray(name));
-						else if (type.equals("class java.lang.Boolean")) {
+						else if (type.equals("class java.lang.Boolean"))
 							field.set(obj, readBoolean(name)); 
+						else if (type.contains("[")) {
+							field.set(obj, readArray(name, DataTypeUtils.getDataType(field, obj), DataTypeUtils.arrType));
 						}
-						else if (type.contains("List") || type.contains("Vector") || type.contains("stack")) {
+						else if (type.contains("List") || type.contains("Vector") || type.contains("Stack")) {
 							List list = null;
 							if (type.equals("class java.util.ArrayList"))
 								list = new ArrayList<T>();
