@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.object.h5.H5Datatype;
 
+//Don't ask the user if its primitive or not
+
 public class DataTypeUtils {
 	
 		public static Class<?> arrType = null;
