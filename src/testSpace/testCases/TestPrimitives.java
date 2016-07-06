@@ -95,7 +95,7 @@ public class TestPrimitives {
 		assertEquals(test, objB.getData());
 	}
 	
-	@Ignore("write and read not implemented for type byte yet")
+	@Ignore("read/write not implemented for type byte yet")
 	@Test
 	public void testByte() {
 		byte test = 3;
