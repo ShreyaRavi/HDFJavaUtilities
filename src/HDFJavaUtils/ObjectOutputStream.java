@@ -4,7 +4,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +13,7 @@ import HDFJavaUtils.interfaces.HDF5Serializable;
 import HDFJavaUtils.interfaces.Ignore;
 import HDFJavaUtils.interfaces.SerializeClassOptions;
 import HDFJavaUtils.interfaces.SerializeFieldOptions;
+
 import ncsa.hdf.hdf5lib.H5;
 import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.hdf5lib.exceptions.HDF5Exception;
@@ -35,7 +35,6 @@ public class ObjectOutputStream {
 
 	private H5File file;
 	private String defaultPath;
-
 	private int maxLength;
 
 	/**
@@ -86,9 +85,9 @@ public class ObjectOutputStream {
 	 * @param name
 	 *            The name of the dataset
 	 */
-	public void writeInt(Object obj, String name) {
+	public void writeInt(Object val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_INT);
-		int[] data = { (int) obj };
+		int[] data = { (int) val };
 		long[] dims = { 1 };
 		writeData(type, data, dims, name);
 	}
@@ -118,8 +117,8 @@ public class ObjectOutputStream {
 	/**
 	 * Creates a new dataset and writes a single String object to it
 	 * 
-	 * @param val
-	 *            The value being written to a dataset
+	 * @param obj
+	 *            The String being written to a dataset
 	 * @param name
 	 *            The name of the dataset
 	 */
@@ -258,7 +257,6 @@ public class ObjectOutputStream {
 		try {
 			file.close();
 		} catch (HDF5Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -329,7 +327,6 @@ public class ObjectOutputStream {
 		}
 	}
 
-	
 	// Writes the actual object to file
 	@SuppressWarnings("rawtypes")
 	private <T> void writeObjectHelper(Object obj, String group) {
@@ -412,7 +409,6 @@ public class ObjectOutputStream {
 			}
 		}
 	}
-	
 
 	// Creates a dataset and writes data to it
 	private void writeData(Datatype type, Object data, long[] dims, String name) {
@@ -425,20 +421,19 @@ public class ObjectOutputStream {
 			e.printStackTrace();
 		}
 	}
-	
 
 	// Returns the dimensions of an n-dimensional array
-	private static int[] getDimensions(Object o) {
-		if (o == null)
+	private static int[] getDimensions(Object arr) {
+		if (arr == null)
 			return null;
-		Object obj = o;
-		Class<?> cl = o.getClass();
+		Object obj = arr;
+		Class<?> cl = arr.getClass();
 		int ndim = 0;
 		while (cl.isArray()) {
 			cl = cl.getComponentType();
 			ndim++;
 		}
-		cl = o.getClass();
+		cl = arr.getClass();
 		int[] dims = new int[ndim];
 		ndim = 0;
 		while (cl.isArray()) {
@@ -458,7 +453,6 @@ public class ObjectOutputStream {
 		}
 		return dims;
 	}
-	
 
 	// Converts a Character Array to an int array
 	private static void copyArrayCharToInt(Object original, Object copy) {
@@ -505,7 +499,6 @@ public class ObjectOutputStream {
 			}
 		}
 	}
-	
 
 	// Returns the max length of all strings in an n-dimensional array
 	private int maxStringLength(Object obj) {
