@@ -27,8 +27,9 @@ public class testDataA implements HDF5Serializable{
 	public Set<Integer> setTest = new TreeSet<Integer>();
 	public Map<Integer, Double> mapTest = new HashMap<Integer, Double>();
 	public String stringTest;
-	public boolean booleanTest;
+	public boolean[] booleanTest = new boolean[2];
 	public testDataB subclassTest = new testDataB();
+	public char[][][] charArrayTest = new char[2][2][3];
 	public int[][][][] multiArrTest3 = {{{{1,2},{3,4},{5,6}},
 		{{7,8},{9,10},{11,12}},
 		{{13,14},{15,16},{17,18}},
@@ -43,6 +44,7 @@ public class testDataA implements HDF5Serializable{
 		longTest = val;
 		doubleTest = val;
 		floatTest = val;
+		charArrayTest[0][0][0] = 'c';
 		subclassTest.test1 = 199;
 		charTest = 'h';
 		listTest.add(4);
@@ -53,14 +55,14 @@ public class testDataA implements HDF5Serializable{
 		setTest.add(11);
 		mapTest.put(2, 4.0);
 		mapTest.put(3, 3.141592);
-		booleanTest = true;
+		booleanTest[0] = true;
 		stringTest = "Hello World";
 		shortTest = (short) val;
 	}
 	
 	public testDataA() {
 		stringTest = "";
-		booleanTest = false;
+		booleanTest[0] = false;
 	}
 	
 	public String toString() {

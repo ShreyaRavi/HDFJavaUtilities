@@ -157,31 +157,6 @@ public class ObjectInputStream {
 		}
 	}
 	
-	public Object readArray(String name, int HDF5Datatype, Class<?> datatype) {
-		try {
-			Dataset dset = (Dataset) file.get(name);
-			int dset_id = dset.open();
-			
-			// must call dset.getMetadata() before calling dset.getDims() because dims are metadata
-			dset.getMetadata();
-			long[] dimensions = dset.getDims();
-			
-			int[] intDims = new int[dimensions.length];
-			for (int i = 0; i < dimensions.length; i++) {
-				intDims[i] = Long.valueOf(dimensions[i]).intValue();
-			}
-			Object arr = Array.newInstance(datatype, intDims);
-			H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
-			dset.close(dset_id);
-			return arr;
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-		
-	}
-	
-
 	/**
 	 * Reads a String from a dataset
 	 * @param name The name of the dataset
@@ -196,7 +171,6 @@ public class ObjectInputStream {
 		}
 	}
 	
-
 	/**
 	 * Reads a generic object from a dataset
 	 * @param name The name of the dataset
@@ -211,7 +185,6 @@ public class ObjectInputStream {
 		}
 	}
 	
-
 	/**
 	 * Reads a boolean from a dataset
 	 * @param name The name of the dataset
@@ -227,8 +200,6 @@ public class ObjectInputStream {
 			return false;
 		}
 	}
-	
-	
 
 	/**
 	 * Acts similar to Java's readObject function.
@@ -253,15 +224,68 @@ public class ObjectInputStream {
 		readObjectHelper(obj, path);
 	}
 
-	private int[] readIntArray(String name) {
+	//Reads in an array
+	private Object readArray(String name, int HDF5Datatype, Class<?> datatype) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
-			return (int[]) dset.read();
+			int dset_id = dset.open();
+			Object arr;
+			Object data;
+			
+			// must call dset.getMetadata() before calling dset.getDims() because dims are metadata
+			dset.getMetadata();
+			long[] dimensions = dset.getDims();
+			
+			int[] intDims = new int[dimensions.length];
+			for (int i = 0; i < dimensions.length; i++) {
+				intDims[i] = Long.valueOf(dimensions[i]).intValue();
+			}
+			if(datatype == Character.TYPE) {
+				data = Array.newInstance(int.class, intDims);
+				System.out.println("here");
+				arr = Array.newInstance(datatype, intDims);
+				H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
+				copyArrayIntToChar(data, arr);
+			} else {
+				arr = Array.newInstance(datatype, intDims);
+				H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
+			}
+			
+			dset.close(dset_id);
+			return arr;
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
 		}
-	
+		
+	}
+
+	//Converts an Int array to a char array
+	private static void copyArrayIntToChar(Object original, Object copy) {
+		int n = Array.getLength(original);
+		for (int i = 0; i < n; i++) {
+			Object e = Array.get(original, i);
+			if (e != null && e.getClass().isArray()) {
+				copyArrayIntToChar(e, Array.get(copy, i));
+			} else {
+				char tmp = (char) Array.getInt(original, i);
+				Array.set(copy, i, tmp); 
+			}
+		}
+	}
+
+	//Converts an Int Array to a boolean array
+	private static void copyArrayIntToBool(Object original, Object copy) {
+		int n = Array.getLength(original);
+		for (int i = 0; i < n; i++) {
+			Object e = Array.get(original, i);
+			if (e != null && e.getClass().isArray()) {
+				copyArrayIntToChar(e, Array.get(copy, i));
+			} else {
+				boolean tmp = Array.getInt(original, i) == 1 ? true : false;
+				Array.set(copy, i, tmp); 
+			}
+		}
 	}
 
 	//Reads the actual Object
@@ -394,8 +418,8 @@ public class ObjectInputStream {
 					}
 				}
 			}
+			
 		}
 	}
-	
 	
 }
