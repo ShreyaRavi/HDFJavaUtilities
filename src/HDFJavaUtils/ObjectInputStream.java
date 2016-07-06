@@ -157,7 +157,7 @@ public class ObjectInputStream {
 		}
 	}
 	
-	public Object readArray(String name, int HDF5Datatype, Class<?> datatype) {
+	public Object readArray(String name, Class <?> arrayType) {
 		try {
 			Dataset dset = (Dataset) file.get(name);
 			int dset_id = dset.open();
@@ -170,8 +170,9 @@ public class ObjectInputStream {
 			for (int i = 0; i < dimensions.length; i++) {
 				intDims[i] = Long.valueOf(dimensions[i]).intValue();
 			}
-			Object arr = Array.newInstance(datatype, intDims);
-			H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
+			int datatype = H5.H5Dget_type(dset_id);
+			Object arr = Array.newInstance(arrayType, intDims);
+			H5.H5Dread(dset_id, datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
 			dset.close(dset_id);
 			return arr;
 		} catch (Exception e) {
@@ -318,7 +319,8 @@ public class ObjectInputStream {
 						else if (type.equals("class java.lang.Boolean"))
 							field.set(obj, readBoolean(name)); 
 						else if (type.contains("[")) {
-							field.set(obj, readArray(name, DataTypeUtils.getDataType(field, obj), DataTypeUtils.arrType));
+							DataTypeUtils.getDataType(type);
+							field.set(obj, readArray(name, DataTypeUtils.getArrayType(field.get(obj))));
 						}
 						else if (type.contains("List") || type.contains("Vector") || type.contains("Stack")) {
 							List list = null;

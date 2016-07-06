@@ -303,8 +303,8 @@ public class ObjectOutputStream {
 		T[] data = (T[]) Array.newInstance(map.get(set.toArray()[0]).getClass(), set.size());
 		long[] dims = { data.length };
 		String[] split = field.getGenericType().toString().split(",");
-		H5Datatype typeKey = DataTypeUtils.getType(split[0], false);
-		H5Datatype typeData = DataTypeUtils.getType(split[1], false);
+		H5Datatype typeKey = DataTypeUtils.getType(split[0]);
+		H5Datatype typeData = DataTypeUtils.getType(split[1]);
 		if (typeKey != null && typeData != null) {
 			T[] keyValues = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
 			Iterator<T> it = set.iterator();
@@ -414,7 +414,7 @@ public class ObjectOutputStream {
 								dimens = new long[1];
 							}
 							
-							writeArray(dimens, field.get(obj), name, DataTypeUtils.getDataType(field, obj));
+							writeArray(dimens, field.get(obj), name, DataTypeUtils.getDataType(field));
 //							writeArray(dims, field.get(obj), name); -- with annotations
 						}
 					} catch (IllegalArgumentException | IllegalAccessException
