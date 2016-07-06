@@ -319,7 +319,8 @@ public class ObjectInputStream {
 						else if (type.equals("class java.lang.Boolean"))
 							field.set(obj, readBoolean(name)); 
 						else if (type.contains("[")) {
-							field.set(obj, readArray(name, DataTypeUtils.getArrayType(field.get(obj))));
+							Class<?> arrType = DataTypeUtils.getArrayType(field.get(obj));
+							field.set(obj, readArray(name, arrType));
 						}
 						else if (type.contains("List") || type.contains("Vector") || type.contains("Stack")) {
 							List list = null;
