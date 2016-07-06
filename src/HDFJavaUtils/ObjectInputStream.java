@@ -254,17 +254,6 @@ public class ObjectInputStream {
 		readObjectHelper(obj, path);
 	}
 
-	private int[] readIntArray(String name) {
-		try {
-			Dataset dset = (Dataset) file.get(name);
-			return (int[]) dset.read();
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
-		}
-	
-	}
-
 	//Reads the actual Object
 	private <T> void readObjectHelper(Object obj, String group) {
 		if (obj instanceof HDF5Serializable) {
