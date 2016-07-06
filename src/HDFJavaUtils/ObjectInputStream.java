@@ -156,7 +156,7 @@ public class ObjectInputStream {
 			return null;
 		}
 	}
-	
+
 	/**
 	 * Reads a String from a dataset
 	 * @param name The name of the dataset
@@ -232,7 +232,6 @@ public class ObjectInputStream {
 			Object arr;
 			Object data;
 			
-			// must call dset.getMetadata() before calling dset.getDims() because dims are metadata
 			dset.getMetadata();
 			long[] dimensions = dset.getDims();
 			
@@ -342,7 +341,8 @@ public class ObjectInputStream {
 						else if (type.equals("class java.lang.Boolean"))
 							field.set(obj, readBoolean(name)); 
 						else if (type.contains("[")) {
-							field.set(obj, readArray(name, DataTypeUtils.getDataType(field, obj), DataTypeUtils.arrType));
+							DataTypeUtils.getDataType(type);
+							field.set(obj, readArray(name, DataTypeUtils.getDataType(field), DataTypeUtils.getArrayType(field.get(obj))));
 						}
 						else if (type.contains("List") || type.contains("Vector") || type.contains("Stack")) {
 							List list = null;
