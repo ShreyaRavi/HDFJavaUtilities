@@ -27,7 +27,7 @@ public class testDataA implements HDF5Serializable{
 	public Map<Integer, Double> mapTest = new HashMap<Integer, Double>();
 	public String stringTest;
 	public boolean booleanTest;
-	public int[][][][] multiArrTest3 = {{{{1,2},{3,4},{5,6}},
+	public float[][][][] multiArrTest3 = {{{{1,2},{3,4},{5,6}},
 		{{7,8},{9,10},{11,12}},
 		{{13,14},{15,16},{17,18}},
 		{{19,20},{21,22},{23,24}}},
