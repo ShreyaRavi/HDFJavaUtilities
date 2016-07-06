@@ -5,8 +5,6 @@ import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.object.Datatype;
 import ncsa.hdf.object.h5.H5Datatype;
 
-//Don't ask the user if its primitive or not
-
 public class DataTypeUtils {
 
 	/**
@@ -14,7 +12,7 @@ public class DataTypeUtils {
 	 * 
 	 * @param field
 	 *            The Field object representing the input data
-	 * @return an H5Datatype object that corresponds to the input data
+	 * @return An H5Datatype object that corresponds to the input data
 	 */
 	public static H5Datatype getType(Field field) {
 		String type = field.getGenericType().toString();
@@ -31,7 +29,7 @@ public class DataTypeUtils {
 	 * 
 	 * @param type
 	 *            The type of the input data represented as a String object
-	 * @return an H5Datatype object that corresponds to the input data
+	 * @return An H5Datatype object that corresponds to the input data
 	 */
 	public static H5Datatype getType(String type) {
 		if (type.contains("java.lang.String")) {
