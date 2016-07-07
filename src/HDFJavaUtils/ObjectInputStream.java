@@ -20,15 +20,15 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import ncsa.hdf.hdf5lib.H5;
-import ncsa.hdf.hdf5lib.HDF5Constants;
-import ncsa.hdf.object.Attribute;
-import ncsa.hdf.object.Dataset;
-import ncsa.hdf.object.h5.H5File;
 import HDFJavaUtils.interfaces.HDF5Serializable;
 import HDFJavaUtils.interfaces.Ignore;
 import HDFJavaUtils.interfaces.SerializeClassOptions;
 import HDFJavaUtils.interfaces.SerializeFieldOptions;
+import ncsa.hdf.hdf5lib.H5;
+import ncsa.hdf.hdf5lib.HDF5Constants;
+import ncsa.hdf.object.Dataset;
+import ncsa.hdf.object.h5.H5File;
+import testSpace.testDataB;
 
 /**
  * The HDF5Util's ObjectOutputStream is a mirror to Java's ObjectInputStream
@@ -40,6 +40,7 @@ public class ObjectInputStream {
 	
 	private H5File file;
 	private String defaultPath;
+	private int recursionIterator;
 
 	/**
 	 * Constructor for the class, the user is required to input a H5File
@@ -238,40 +239,59 @@ public class ObjectInputStream {
 	}
 
 	//Reads in an array
-	private Object readArray(String name, int HDF5Datatype, Class<?> datatype) {
-		try {
-			Dataset dset = (Dataset) file.get(name);
-			int dset_id = dset.open();
-			Object arr;
-			Object data;
-			
-			dset.getMetadata();
-			long[] dimensions = dset.getDims();
-			
-			int[] intDims = new int[dimensions.length];
-			for (int i = 0; i < dimensions.length; i++) {
-				intDims[i] = Long.valueOf(dimensions[i]).intValue();
+	private <T> Object readArray(String name, int HDF5Datatype, Class<?> datatype, Object obj) {
+		if(datatype != null) {
+			try {
+				Dataset dset = (Dataset) file.get(name);
+				int dset_id = dset.open();
+				Object arr;
+				Object data;
+				
+				dset.getMetadata();
+				long[] dimensions = dset.getDims();
+				
+				int[] intDims = new int[dimensions.length];
+				for (int i = 0; i < dimensions.length; i++) {
+					intDims[i] = Long.valueOf(dimensions[i]).intValue();
+				}
+				if(datatype == Character.TYPE) {
+					data = Array.newInstance(int.class, intDims);
+					arr = Array.newInstance(datatype, intDims);
+					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
+					copyArrayIntToChar(data, arr);
+				} else if(datatype == Boolean.TYPE) {
+					data = Array.newInstance(int.class, intDims);
+					arr = Array.newInstance(datatype, intDims);
+					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
+					copyArrayIntToBool(data, arr);
+				}	else {
+					arr = Array.newInstance(datatype, intDims);
+					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
+				}
+				
+				dset.close(dset_id);
+				return arr;
+			} catch (Exception e) {
+				e.printStackTrace();
+				return null;
 			}
-			if(datatype == Character.TYPE) {
-				data = Array.newInstance(int.class, intDims);
-				arr = Array.newInstance(datatype, intDims);
-				H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
-				copyArrayIntToChar(data, arr);
-			} else if(datatype == Boolean.TYPE) {
-				data = Array.newInstance(int.class, intDims);
-				arr = Array.newInstance(datatype, intDims);
-				H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
-				copyArrayIntToChar(data, arr);
-			}	else {
-				arr = Array.newInstance(datatype, intDims);
-				H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
+		} else {
+			try {
+				int[] info = (int[]) read(name + "/" + "info");
+				int[] dims = (int[]) read(name + "/" + "dimensions");
+				Class<?> cl = getBaseClass(obj);
+				Object objectArray = Array.newInstance(cl, dims);
+				T[] flatArray = (T[]) Array.newInstance(cl, info[0]);
+				for(int i=1; i<info.length; i++) {
+					Array.set(flatArray, info[i], cl.newInstance());
+					readObjectHelper(flatArray[info[i]], name + "/" + info[i]);
+				}
+				curlArray(flatArray, objectArray);
+				return objectArray;
+			} catch (Exception e) {
+				e.printStackTrace();
+				return null;
 			}
-			
-			dset.close(dset_id);
-			return arr;
-		} catch (Exception e) {
-			e.printStackTrace();
-			return null;
 		}
 		
 	}
@@ -296,19 +316,42 @@ public class ObjectInputStream {
 		for (int i = 0; i < n; i++) {
 			Object e = Array.get(original, i);
 			if (e != null && e.getClass().isArray()) {
-				copyArrayIntToChar(e, Array.get(copy, i));
+				copyArrayIntToBool(e, Array.get(copy, i));
 			} else {
 				boolean tmp = Array.getInt(original, i) == 1 ? true : false;
 				Array.set(copy, i, tmp); 
 			}
 		}
 	}
+	
+	private void curlArray(Object flat, Object curled) {
+		int n = Array.getLength(curled);
+		for (int i = 0; i < n; i++) {
+			Object e = Array.get(curled, i);
+			if (e != null && e.getClass().isArray()) {
+				curlArray(flat, e);
+			} else {
+				Array.set(curled, i, Array.get(flat, recursionIterator));
+				recursionIterator++;
+			}
+		}
+	}
+	
+	private static Class<?> getBaseClass(Object obj) {
+        if (obj == null) 
+            return Void.TYPE;
+        Class<?> cl = obj.getClass();
+        while (cl.isArray()) 
+            cl = cl.getComponentType();
+        return cl;
+    }
 
 	//Reads the actual Object
 	private <T> void readObjectHelper(Object obj, String group) {
-		if (obj instanceof HDF5Serializable) {
+		if (obj != null && obj instanceof HDF5Serializable) {
+			recursionIterator = 0;
 			Class<?> objClass = obj.getClass();
-			Field[] fields = objClass.getFields();
+			Field[] fields = objClass.getDeclaredFields();
 			String path = "";
 			SerializeClassOptions options = (SerializeClassOptions) objClass.getAnnotation(SerializeClassOptions.class);
 			if (group != null)
@@ -323,6 +366,7 @@ public class ObjectInputStream {
 				path += "/" + obj.getClass().getSimpleName();
 			}
 			for (Field field : fields) {
+				field.setAccessible(true);
 				String name = "";
 				long[] dims = { 1, 1 };
 				String localGroup = "";
@@ -357,11 +401,11 @@ public class ObjectInputStream {
 							field.set(obj, readString(name));
 						else if (type.equals("class java.lang.Boolean"))
 							field.set(obj, readBoolean(name)); 
+						else if(type.equals("class java.lang.Byte"))
+							field.set(obj, readByte(name));
 						else if (type.contains("[")) {
 							DataTypeUtils.getDataType(type);
-							field.set(obj, readArray(name, DataTypeUtils.getDataType(field), DataTypeUtils.getArrayType(field.get(obj))));
-							Class<?> arrType = DataTypeUtils.getArrayType(field.get(obj));
-							field.set(obj, readArray(name, DataTypeUtils.getDataType(field), arrType));
+							field.set(obj, readArray(name, DataTypeUtils.getDataType(field), DataTypeUtils.getArrayType(field.get(obj)), field.get(obj)));
 						}
 						else if (type.contains("List") || type.contains("Vector") || type.contains("Stack")) {
 							List list = null;

@@ -15,9 +15,11 @@ public class testing {
 		testDataA a = new testDataA(5);
 		testDataA b = new testDataA();
 		System.out.println(a.toString());
+		int test = 1;
 		o.writeObject(a);
 		in.readObject(b);
-	//	o.writeObject(b, "Updated Test");
+		o.writeObject(b, "Updated Test");
+	//	System.out.println(b.objectArrayTest[0][0].test2);
 		System.out.println(b.toString());
 	}
 	

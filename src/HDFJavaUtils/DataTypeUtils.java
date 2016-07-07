@@ -90,6 +90,11 @@ public class DataTypeUtils {
 		String type = field.getGenericType().toString();
 		return getDataType(type);
 	}
+	
+	public static int getDataType(Object obj) {
+		String type = obj.getClass().getComponentType().toString();
+		return getDataType(type);
+	}
 
 	/**
 	 * Gets the Class object representing the type of data in the array when the
@@ -116,7 +121,7 @@ public class DataTypeUtils {
 		} else if (type.lastIndexOf("[B") == (type.length() - 2)) {
 			return Byte.TYPE;
 		} else if (type.lastIndexOf("[Z") == (type.length() - 2)) {
-			return Float.TYPE;
+			return Boolean.TYPE;
 		}
 		return null;
 	}

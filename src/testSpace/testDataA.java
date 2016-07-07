@@ -17,10 +17,9 @@ import HDFJavaUtils.interfaces.HDF5Serializable;
 public class testDataA implements HDF5Serializable{
 	public int integerTest;
 	public long longTest;
-	@SerializeFieldOptions(path = "Hiding/Really well", name = "Other Name")
 	public double doubleTest;
 	public float floatTest;
-	public short shortTest;
+	private short shortTest;
 	public char charTest;
 	public int[] intArrayTest = {1, 12, 53, 45, 76};
 	public List<Integer> listTest = new LinkedList<Integer>();
@@ -29,6 +28,7 @@ public class testDataA implements HDF5Serializable{
 	public String stringTest;
 	public byte byteTest;
 	public boolean booleanTest;
+	public testDataB[][] objectArrayTest = new testDataB[2][2];
 	public boolean[][][] boolArrayTest = new boolean[4][2][3];
 	public char[][] charArrayTest = new char[2][3];
 	public int[][][][] multiArrTest = new int[4][3][2][2];
@@ -38,6 +38,10 @@ public class testDataA implements HDF5Serializable{
 		longTest = val;
 		doubleTest = val;
 		byteTest = 127;
+		objectArrayTest[0][0] = new testDataB();
+		objectArrayTest[0][0].test2 = "works";
+		objectArrayTest[1][0] = new testDataB();
+		objectArrayTest[1][0].test2 = "works twice";
 		boolArrayTest[1][1][2] = true;
 		floatTest = val;
 		multiArrTest[0][0][0][0] = 55000;
@@ -65,7 +69,7 @@ public class testDataA implements HDF5Serializable{
 		String returnString = "";
 		System.out.println("Test Data");
 		Class<?> objClass = this.getClass();
-	    Field[] fields = objClass.getFields();
+	    Field[] fields = objClass.getDeclaredFields();
 	    for(Field field : fields) {
 	    	try {
 				returnString += " " + field.getType() + ": " + field.get(this) + "\n";

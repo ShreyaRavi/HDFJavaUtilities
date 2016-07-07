@@ -4,7 +4,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +15,6 @@ import HDFJavaUtils.interfaces.HDF5Serializable;
 import HDFJavaUtils.interfaces.Ignore;
 import HDFJavaUtils.interfaces.SerializeClassOptions;
 import HDFJavaUtils.interfaces.SerializeFieldOptions;
-
 import ncsa.hdf.hdf5lib.H5;
 import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.hdf5lib.exceptions.HDF5Exception;
@@ -37,6 +37,7 @@ public class ObjectOutputStream {
 	private H5File file;
 	private String defaultPath;
 	private int maxLength;
+	private int recursiveIterator;
 
 	/**
 	 * Constructor for the class, the user is required to input a H5File
@@ -255,29 +256,49 @@ public class ObjectOutputStream {
 		}
 	}
 
-	// TODO: support arrays of Objects
 	// TODO: support arrays of wrapper classes (Integer, Long, etc.)
-	private void writeArray(long[] dimensions, Object obj, String name, int HDF5Datatype) {
-		final H5Datatype type = new H5Datatype(HDF5Datatype);
-		Object data;
-		if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
-			data = Array.newInstance(int.class, getDimensions(obj));
-			copyArrayCharToInt(obj, data);
-		} else if(HDF5Datatype == HDF5Constants.H5T_NATIVE_HBOOL) {
-			data = Array.newInstance(int.class, getDimensions(obj));
-			copyArrayBoolToInt(obj, data);
-		}
-		else {
-			data = obj;
-		}
-		try {
-			Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name, null, type, dimensions, null, null, 0, null);
-			int dset_id = dset.open();
-			H5.H5Dwrite(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
-					data);
-			dset.close(dset_id);
-		} catch (Exception e) {
-			e.printStackTrace();
+	private <T> void writeArray(long[] dimensions, Object obj, String name, int HDF5Datatype) {
+		if(HDF5Datatype != -1) {
+			final H5Datatype type = new H5Datatype(HDF5Datatype);
+			Object data;
+			if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
+				data = Array.newInstance(int.class, getDimensions(obj));
+				copyArrayCharToInt(obj, data);
+			} else if(HDF5Datatype == HDF5Constants.H5T_NATIVE_HBOOL) {
+				data = Array.newInstance(int.class, getDimensions(obj));
+				copyArrayBoolToInt(obj, data);
+			}
+			else {
+				data = obj;
+			}
+			try {
+				Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name, null, type, dimensions, null, null, 0, null);
+				int dset_id = dset.open();
+				H5.H5Dwrite(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
+						data);
+				dset.close(dset_id);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		} else {
+			int[] dims = getDimensions(obj);
+			int length = 1;
+			for(int d : dims)
+				length *= d;
+			T[] flat = (T[]) Array.newInstance(getBaseClass(obj), length);
+			flattenArray(obj, flat);
+			int index = 0;
+			ArrayList<Integer> locations = new ArrayList<>();
+			locations.add(flat.length);
+			for(T i : flat) {
+				if(i != null) {
+					writeObjectHelper(i, name + "/" + index);
+					locations.add(index);
+				}
+				index++;
+			}
+			writeArray(new long[] {dims.length}, dims, name + "/" + "dimensions", HDF5Constants.H5T_NATIVE_INT);
+			writeList(locations, name + "/" + "info", new H5Datatype(HDF5Constants.H5T_NATIVE_INT));
 		}
 	}
 
@@ -350,9 +371,10 @@ public class ObjectOutputStream {
 	// Writes the actual object to file
 	@SuppressWarnings("rawtypes")
 	private <T> void writeObjectHelper(Object obj, String group) {
-		if (obj instanceof HDF5Serializable) {
+		if (obj instanceof HDF5Serializable && obj != null) {
 			Class<?> objClass = obj.getClass();
-			Field[] fields = objClass.getFields();
+			Field[] fields = objClass.getDeclaredFields();
+			
 			String path = "";
 			SerializeClassOptions options = (SerializeClassOptions) objClass.getAnnotation(SerializeClassOptions.class);
 			if (group != null)
@@ -368,6 +390,8 @@ public class ObjectOutputStream {
 			}
 			createPath(path, defaultPath);
 			for (Field field : fields) {
+				field.setAccessible(true);
+				recursiveIterator = 0;
 				String name = "";
 				long[] dims = { -1 };
 				String localGroup = "";
@@ -385,9 +409,10 @@ public class ObjectOutputStream {
 						if (!localGroup.equals(""))
 							createPath(localGroup, defaultPath + "/" + path);
 						name = defaultPath + "/" + path + "/" + localGroup + "/" + name;
-						String type = field.get(obj).getClass().toString();
-						// System.out.println("class: " + type + " type: " +
-						// field.getGenericType());
+						String type = "";
+						type = field.get(obj).getClass().toString();
+						//System.out.println("class: " + type + " type: " + field.getGenericType());
+						
 						if (type.equals("class java.lang.Integer"))
 							writeInt(field.get(obj), name);
 						else if (type.equals("class java.lang.Long"))
@@ -423,16 +448,20 @@ public class ObjectOutputStream {
 									dims[i] = (long) temp[i];
 							}
 							writeArray(dims, field.get(obj), name, DataTypeUtils.getDataType(field));
-//							writeArray(dims, field.get(obj), name); -- with annotations
 						}
-					} catch (IllegalArgumentException | IllegalAccessException | SecurityException e) {
+					} catch (IllegalArgumentException | IllegalAccessException | SecurityException | NullPointerException e) {
 						e.printStackTrace();
 					}
 				}
 			}
 		}
 	}
+	
 
+	private void writeCollection(Object obj, String name) {
+
+	}
+	
 	// Creates a dataset and writes data to it
 	private void writeData(Datatype type, Object data, long[] dims, String name) {
 		try {
@@ -474,7 +503,6 @@ public class ObjectOutputStream {
 			cl = cl.getComponentType();
 			ndim++;
 		}
-		System.out.println("DIMS: " + Arrays.toString(dims));
 		return dims;
 	}
 
@@ -505,7 +533,17 @@ public class ObjectOutputStream {
 			}
 		}
 	}
+	
 
+	private static Class<?> getBaseClass(Object obj) {
+        if (obj == null) 
+            return Void.TYPE;
+        Class<?> cl = obj.getClass();
+        while (cl.isArray()) 
+            cl = cl.getComponentType();
+        return cl;
+    }
+	
 	// Creates groups going to a String path, basePath is where to start
 	// creating groups
 	private void createPath(String path, String basePath) {
@@ -524,6 +562,19 @@ public class ObjectOutputStream {
 		}
 	}
 
+	private void flattenArray(Object original, Object flattened) {
+		int n = Array.getLength(original);
+		for (int i = 0; i < n; i++) {
+			Object e = Array.get(original, i);
+			if (e != null && e.getClass().isArray()) {
+				flattenArray(e, flattened);
+			} else {
+				Array.set(flattened, recursiveIterator, Array.get(original, i));
+				recursiveIterator++;
+			}
+		}
+	}
+	
 	// Returns the max length of all strings in an n-dimensional array
 	private int maxStringLength(Object obj) {
 		int n = Array.getLength(obj);
