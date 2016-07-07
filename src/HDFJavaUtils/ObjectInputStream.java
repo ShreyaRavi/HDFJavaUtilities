@@ -123,6 +123,19 @@ public class ObjectInputStream {
 			return -1;
 		}
 	}
+	
+	/**
+	 * Reads a byte from a dataset
+	 * @param name The name of the dataset
+	 */
+	public byte readByte(String name) {
+		try {
+			return  Array.getByte(read(name), 0);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return -1;
+		}
+	}
 
 	/**
 	 * Reads a character from a dataset
@@ -241,11 +254,15 @@ public class ObjectInputStream {
 			}
 			if(datatype == Character.TYPE) {
 				data = Array.newInstance(int.class, intDims);
-				System.out.println("here");
 				arr = Array.newInstance(datatype, intDims);
 				H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
 				copyArrayIntToChar(data, arr);
-			} else {
+			} else if(datatype == Boolean.TYPE) {
+				data = Array.newInstance(int.class, intDims);
+				arr = Array.newInstance(datatype, intDims);
+				H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
+				copyArrayIntToChar(data, arr);
+			}	else {
 				arr = Array.newInstance(datatype, intDims);
 				H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
 			}
@@ -343,6 +360,8 @@ public class ObjectInputStream {
 						else if (type.contains("[")) {
 							DataTypeUtils.getDataType(type);
 							field.set(obj, readArray(name, DataTypeUtils.getDataType(field), DataTypeUtils.getArrayType(field.get(obj))));
+							Class<?> arrType = DataTypeUtils.getArrayType(field.get(obj));
+							field.set(obj, readArray(name, DataTypeUtils.getDataType(field), arrType));
 						}
 						else if (type.contains("List") || type.contains("Vector") || type.contains("Stack")) {
 							List list = null;

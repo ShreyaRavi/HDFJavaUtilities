@@ -53,6 +53,9 @@ public class DataTypeUtils {
 		else if ((type.lastIndexOf("[C") == (type.length() - 2))
 				|| type.contains("Char"))
 			return HDF5Constants.H5T_NATIVE_CHAR;
+		else if ((type.lastIndexOf("[B") == (type.length() - 2))
+				|| type.contains("Byte"))
+			return HDF5Constants.H5T_NATIVE_INT8;
 		else if ((type.lastIndexOf("[S") == (type.length() - 2))
 				|| type.contains("Short"))
 			return HDF5Constants.H5T_NATIVE_SHORT;
@@ -70,7 +73,7 @@ public class DataTypeUtils {
 			return HDF5Constants.H5T_NATIVE_CHAR;
 		else if ((type.lastIndexOf("[Z") == (type.length() - 2))
 				|| type.contains("Boolean"))
-			return HDF5Constants.H5T_NATIVE_INT;
+			return HDF5Constants.H5T_NATIVE_HBOOL;
 		else
 			return -1;
 	}

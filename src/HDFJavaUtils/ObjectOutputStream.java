@@ -4,6 +4,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -92,28 +93,6 @@ public class ObjectOutputStream {
 		writeData(type, data, dims, name);
 	}
 
-	// TODO: support arrays of Objects
-	// TODO: support arrays of wrapper classes (Integer, Long, etc.)
-	public void writeArray(long[] dimensions, Object obj, String name, int HDF5Datatype) {
-		final H5Datatype type = new H5Datatype(HDF5Datatype);
-		Object data;
-		if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
-			data = Array.newInstance(int.class, getDimensions(obj));
-			copyArrayCharToInt(obj, data);
-		} else {
-			data = obj;
-		}
-		try {
-			Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name, null, type, dimensions, null, null, 0, null);
-			int dset_id = dset.open();
-			H5.H5Dwrite(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
-					data);
-			dset.close(dset_id);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
 	/**
 	 * Creates a new dataset and writes a single String object to it
 	 * 
@@ -188,6 +167,21 @@ public class ObjectOutputStream {
 		long[] dims = { 1 };
 		writeData(type, data, dims, name);
 	}
+	
+	/**
+	 * Creates a new dataset and writes a single byte value to it
+	 * 
+	 * @param val
+	 *            The value being written to a dataset
+	 * @param name
+	 *            The name of the dataset
+	 */
+	public void writeByte(byte val, String name) {
+		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_INT8);
+		byte[] data = { val };
+		long[] dims = { 1 };
+		writeData(type, data, dims, name);
+	}
 
 	/**
 	 * Creates a new dataset and writes a single Character value to it
@@ -257,6 +251,32 @@ public class ObjectOutputStream {
 		try {
 			file.close();
 		} catch (HDF5Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	// TODO: support arrays of Objects
+	// TODO: support arrays of wrapper classes (Integer, Long, etc.)
+	private void writeArray(long[] dimensions, Object obj, String name, int HDF5Datatype) {
+		final H5Datatype type = new H5Datatype(HDF5Datatype);
+		Object data;
+		if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
+			data = Array.newInstance(int.class, getDimensions(obj));
+			copyArrayCharToInt(obj, data);
+		} else if(HDF5Datatype == HDF5Constants.H5T_NATIVE_HBOOL) {
+			data = Array.newInstance(int.class, getDimensions(obj));
+			copyArrayBoolToInt(obj, data);
+		}
+		else {
+			data = obj;
+		}
+		try {
+			Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name, null, type, dimensions, null, null, 0, null);
+			int dset_id = dset.open();
+			H5.H5Dwrite(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
+					data);
+			dset.close(dset_id);
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -384,6 +404,8 @@ public class ObjectOutputStream {
 							writeString((String) field.get(obj), name);
 						else if (type.equals("class java.lang.Boolean"))
 							writeBoolean(field.getBoolean(obj), name);
+						else if (type.equals("class java.lang.Byte"))
+							writeByte(field.getByte(obj), name);
 						else if (type.contains("List")) {
 							writeList((List) field.get(obj), name, DataTypeUtils.getType(field));
 						} else if (type.contains("Set")) {
@@ -452,6 +474,7 @@ public class ObjectOutputStream {
 			cl = cl.getComponentType();
 			ndim++;
 		}
+		System.out.println("DIMS: " + Arrays.toString(dims));
 		return dims;
 	}
 
@@ -475,7 +498,7 @@ public class ObjectOutputStream {
 		for (int i = 0; i < n; i++) {
 			Object e = Array.get(original, i);
 			if (e != null && e.getClass().isArray()) {
-				copyArrayCharToInt(e, Array.get(copy, i));
+				copyArrayBoolToInt(e, Array.get(copy, i));
 			} else {
 				int tmp = Array.getBoolean(original, i) ? 1 : 0;
 				Array.set(copy, i, tmp);

@@ -8,16 +8,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import HDFJavaUtils.annotations.SerializeClassOptions;
+import HDFJavaUtils.annotations.SerializeFieldOptions;
+import HDFJavaUtils.annotations.SerializeOptions;
 import HDFJavaUtils.interfaces.HDF5Serializable;
-import HDFJavaUtils.interfaces.Ignore;
-import HDFJavaUtils.interfaces.SerializeClassOptions;
-import HDFJavaUtils.interfaces.SerializeFieldOptions;
 
-@SerializeClassOptions()
+@SerializeClassOptions(path = "Hello", name = "Different Name")
 public class testDataA implements HDF5Serializable{
 	public int integerTest;
 	public long longTest;
-	@SerializeFieldOptions(path = "Hiding/Really well", name = "Other Name", dimensions = {1, 1})
+	@SerializeFieldOptions(path = "Hiding/Really well", name = "Other Name")
 	public double doubleTest;
 	public float floatTest;
 	public short shortTest;
@@ -27,26 +27,22 @@ public class testDataA implements HDF5Serializable{
 	public Set<Integer> setTest = new TreeSet<Integer>();
 	public Map<Integer, Double> mapTest = new HashMap<Integer, Double>();
 	public String stringTest;
+	public byte byteTest;
 	public boolean booleanTest;
-	public testDataB subclassTest = new testDataB();
-	public char[][][] charArrayTest = new char[2][2][3];
-	public int[][][][] multiArrTest3 = {{{{1,2},{3,4},{5,6}},
-		{{7,8},{9,10},{11,12}},
-		{{13,14},{15,16},{17,18}},
-		{{19,20},{21,22},{23,24}}},
-		{{{1,2},{3,4},{5,6}},
-		{{7,8},{9,10},{11,12}},
-		{{13,14},{15,16},{17,18}},
-		{{19,20},{21,22},{23,24}}}};
-
+	public boolean[][][] boolArrayTest = new boolean[4][2][3];
+	public char[][] charArrayTest = new char[2][3];
+	public int[][][][] multiArrTest = new int[4][3][2][2];
+	
 	public testDataA(int val) {
 		integerTest = val;
 		longTest = val;
 		doubleTest = val;
+		byteTest = 127;
+		boolArrayTest[1][1][2] = true;
 		floatTest = val;
-		charArrayTest[0][0][0] = 'c';
-		subclassTest.test1 = 199;
+		multiArrTest[0][0][0][0] = 55000;
 		charTest = 'h';
+		charArrayTest[0][1] = 'b';
 		listTest.add(4);
 		listTest.add(42);
 		listTest.add(12);
@@ -70,11 +66,9 @@ public class testDataA implements HDF5Serializable{
 		System.out.println("Test Data");
 		Class<?> objClass = this.getClass();
 	    Field[] fields = objClass.getFields();
-	    
 	    for(Field field : fields) {
 	    	try {
-	    		System.out.print(" " + field.getType() + ": " + field.get(this) + "\n");
-				//returnString += " " + field.getType() + ": " + field.get(this) + "\n";
+				returnString += " " + field.getType() + ": " + field.get(this) + "\n";
 			} catch (IllegalArgumentException | IllegalAccessException e) {
 				e.printStackTrace();
 			}
