@@ -423,9 +423,9 @@ public class ObjectOutputStream {
 							writeFloat(field.getFloat(obj), name);
 						else if (type.equals("class java.lang.Short"))
 							writeShort(field.getShort(obj), name);
-						else if (type.equals("class java.lang.Character"))
+						else if (type.equals("class java.lang.Character")) {
 							writeChar(field.getChar(obj), name);
-						else if (type.equals("class java.lang.String"))
+						}else if (type.equals("class java.lang.String"))
 							writeString((String) field.get(obj), name);
 						else if (type.equals("class java.lang.Boolean"))
 							writeBoolean(field.getBoolean(obj), name);

@@ -1,4 +1,4 @@
-package testSpace.testCases;
+package testSpace;
 
 import static org.junit.Assert.*;
 
@@ -9,7 +9,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import testSpace.testClasses.*;
+import testSpace.primitives.*;
 import HDFJavaUtils.*;
 
 public class TestPrimitives {
@@ -20,90 +20,81 @@ public class TestPrimitives {
 	
 	@BeforeClass
 	public static void init() {
-		file = new H5File("test.h5", FileFormat.CREATE);
+		file = new H5File("testPrimitives.h5", FileFormat.CREATE);
 		out = new ObjectOutputStream(file);
 		in = new ObjectInputStream(file);
 	}
 
 	@Test
 	public void testInt() {
-		int test = 3;
-		IntTest objA = new IntTest(test);
+		IntTest objA = new IntTest((int)3);
 		IntTest objB = new IntTest();
 		out.writeObject(objA);
 		in.readObject(objB);
-		assertEquals(test, objB.getData(), 0);
+		assertEquals(objA.getData(), objB.getData(), 0);
 	}
 	
 	@Test
 	public void testDouble() {
-		double test = 3.0;
-		DoubleTest objA = new DoubleTest(test);
+		DoubleTest objA = new DoubleTest((double)3.0);
 		DoubleTest objB = new DoubleTest();
 		out.writeObject(objA);
 		in.readObject(objB);
-		assertEquals(test, objB.getData(), 0.0);
+		assertEquals(objA.getData(), objB.getData(), 0.0);
 	}
 	
 	@Test
 	public void testChar() {
-		char test = 'a';
-		CharTest objA = new CharTest(test);
+		CharTest objA = new CharTest((char)'a');
 		CharTest objB = new CharTest();
 		out.writeObject(objA);
 		in.readObject(objB);
-		assertEquals(test, objB.getData());
+		assertEquals(objA.getData(), objB.getData());
 	}
 	
 	@Test
 	public void testShort() {
-		short test = 3;
-		ShortTest objA = new ShortTest(test);
+		ShortTest objA = new ShortTest((short)3);
 		ShortTest objB = new ShortTest();
 		out.writeObject(objA);
 		in.readObject(objB);
-		assertEquals(test, objB.getData(), 0);
+		assertEquals(objA.getData(), objB.getData(), 0);
 	}
 	
 	@Test
 	public void testLong() {
-		long test = 3;
-		LongTest objA = new LongTest(test);
+		LongTest objA = new LongTest((long)3);
 		LongTest objB = new LongTest();
 		out.writeObject(objA);
 		in.readObject(objB);
-		assertEquals(test, objB.getData(), 0);
+		assertEquals(objA.getData(), objB.getData(), 0);
 	}
 	
 	@Test
 	public void testFloat() {
-		float test = 3.0f;
-		FloatTest objA = new FloatTest(test);
+		FloatTest objA = new FloatTest((float)3.0);
 		FloatTest objB = new FloatTest();
 		out.writeObject(objA);
 		in.readObject(objB);
-		assertEquals(test, objB.getData(), 0.0);
+		assertEquals(objA.getData(), objB.getData(), 0.0);
 	}
 	
 	@Test
 	public void testBoolean() {
-		boolean test = true;
-		BooleanTest objA = new BooleanTest(test);
+		BooleanTest objA = new BooleanTest((boolean)true);
 		BooleanTest objB = new BooleanTest();
 		out.writeObject(objA);
 		in.readObject(objB);
-		assertEquals(test, objB.getData());
+		assertEquals(objA.getData(), objB.getData());
 	}
 	
-	@Ignore("read/write not implemented for type byte yet")
 	@Test
 	public void testByte() {
-		byte test = 3;
-		ByteTest objA = new ByteTest(test);
+		ByteTest objA = new ByteTest((byte)3);
 		ByteTest objB = new ByteTest();
 		out.writeObject(objA);
 		in.readObject(objB);
-		assertEquals(test, objB.getData(), 0);
+		assertEquals(objA.getData(), objB.getData(), 0);
 	}
 
 }

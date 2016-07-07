@@ -1,4 +1,4 @@
-package testSpace.testClasses;
+package testSpace.primitives;
 
 import HDFJavaUtils.interfaces.HDF5Serializable;
 

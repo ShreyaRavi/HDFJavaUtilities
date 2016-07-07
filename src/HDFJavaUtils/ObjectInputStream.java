@@ -395,8 +395,8 @@ public class ObjectInputStream {
 							field.setShort(obj, readShort(name));
 						else if (type.equals("class java.lang.Character"))
 							field.setChar(obj, readChar(name));
-						else if (type.equals("class [C"))
-							field.set(obj, readCharArray(name));
+//						else if (type.equals("class [C"))
+//							field.set(obj, readCharArray(name));
 						else if (type.equals("class java.lang.String"))
 							field.set(obj, readString(name));
 						else if (type.equals("class java.lang.Boolean"))
