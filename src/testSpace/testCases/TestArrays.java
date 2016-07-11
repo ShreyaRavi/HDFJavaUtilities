@@ -1,4 +1,4 @@
-package testSpace;
+package testSpace.testCases;
 
 import static org.junit.Assert.*;
 
@@ -55,7 +55,7 @@ public class TestArrays {
 	}
 	
 	@Test
-	public void tesByteArray() {
+	public void testByteArray() {
 		ByteArrayTest objA = new ByteArrayTest((byte)3,(byte)7,(byte)0);
 		ByteArrayTest objB = new ByteArrayTest();
 		out.writeObject(objA);

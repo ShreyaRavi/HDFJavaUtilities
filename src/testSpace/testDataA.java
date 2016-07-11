@@ -20,7 +20,7 @@ public class testDataA implements HDF5Serializable{
 	public double doubleTest;
 	public float floatTest;
 	private short shortTest;
-	public char charTest;
+	private char charTest;
 	public int[] intArrayTest = {1, 12, 53, 45, 76};
 	public List<Integer> listTest = new LinkedList<Integer>();
 	public Set<Integer> setTest = new TreeSet<Integer>();
@@ -42,11 +42,16 @@ public class testDataA implements HDF5Serializable{
 		objectArrayTest[0][0].test2 = "works";
 		objectArrayTest[1][0] = new testDataB();
 		objectArrayTest[1][0].test2 = "works twice";
-		boolArrayTest[1][1][2] = true;
+		boolArrayTest[0][0][2] = true;
 		floatTest = val;
 		multiArrTest[0][0][0][0] = 55000;
 		charTest = 'h';
+		charArrayTest[0][0] = 'a';
 		charArrayTest[0][1] = 'b';
+		charArrayTest[0][2] = 'a';
+		charArrayTest[1][0] = 'b';
+		charArrayTest[1][1] = 'a';
+		charArrayTest[1][2] = 'b';
 		listTest.add(4);
 		listTest.add(42);
 		listTest.add(12);

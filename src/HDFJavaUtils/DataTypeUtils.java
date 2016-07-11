@@ -107,21 +107,21 @@ public class DataTypeUtils {
 	public static Class<?> getArrayType(Object obj) {
 		String type = obj.getClass().getName();
 		if (type.lastIndexOf("[I") == (type.length() - 2)) {
-			return Integer.TYPE;
+			return int.class;
 		} else if (type.lastIndexOf("[C") == (type.length() - 2)) {
-			return Character.TYPE;
+			return char.class;
 		} else if (type.lastIndexOf("[S") == (type.length() - 2)) {
-			return Short.TYPE;
+			return short.class;
 		} else if (type.lastIndexOf("[D") == (type.length() - 2)) {
-			return Double.TYPE;
+			return double.class;
 		} else if (type.lastIndexOf("[J") == (type.length() - 2)) {
-			return Long.TYPE;
+			return long.class;
 		} else if (type.lastIndexOf("[F") == (type.length() - 2)) {
-			return Float.TYPE;
+			return float.class;
 		} else if (type.lastIndexOf("[B") == (type.length() - 2)) {
-			return Byte.TYPE;
+			return byte.class;
 		} else if (type.lastIndexOf("[Z") == (type.length() - 2)) {
-			return Boolean.TYPE;
+			return boolean.class;
 		}
 		return null;
 	}

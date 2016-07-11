@@ -1,4 +1,4 @@
-package testSpace;
+package testSpace.testCases;
 
 import static org.junit.Assert.*;
 
@@ -56,7 +56,7 @@ public class TestTreeSets {
 	}
 	
 	@Test
-	public void tesByteTreeSet() {
+	public void testByteTreeSet() {
 		ByteTreeSetTest objA = new ByteTreeSetTest((byte)3,(byte)7,(byte)0);
 		ByteTreeSetTest objB = new ByteTreeSetTest();
 		out.writeObject(objA);

@@ -1,4 +1,4 @@
-package testSpace;
+package testSpace.testCases;
 
 import static org.junit.Assert.*;
 
@@ -6,7 +6,6 @@ import ncsa.hdf.object.FileFormat;
 import ncsa.hdf.object.h5.H5File;
 
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import testSpace.primitives.*;

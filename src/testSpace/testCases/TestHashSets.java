@@ -1,4 +1,4 @@
-package testSpace;
+package testSpace.testCases;
 
 import static org.junit.Assert.*;
 
@@ -56,7 +56,7 @@ public class TestHashSets {
 	}
 	
 	@Test
-	public void tesByteHashSet() {
+	public void testByteHashSet() {
 		ByteHashSetTest objA = new ByteHashSetTest((byte)3,(byte)7,(byte)0);
 		ByteHashSetTest objB = new ByteHashSetTest();
 		out.writeObject(objA);
