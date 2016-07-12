@@ -24,7 +24,8 @@ import testSpace.testCases.*;
 	TestConcurrentSkipListMaps.class,
 	TestWeakHashMaps.class,
 	TestTreeMaps.class,
-	TestHashtables.class
+	TestHashtables.class,
+	TestMethods.class
 				})
 public class AllTests {
 
