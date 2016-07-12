@@ -379,7 +379,6 @@ public class ObjectOutputStream {
 		if (obj instanceof HDF5Serializable && obj != null) {
 			Class<?> objClass = obj.getClass();
 			Field[] fields = objClass.getDeclaredFields();
-			// Field[] fields = objClass.getFields();
 			String path = "";
 			SerializeClassOptions options = (SerializeClassOptions) objClass.getAnnotation(SerializeClassOptions.class);
 			if (group != null) {
@@ -421,8 +420,7 @@ public class ObjectOutputStream {
 						name = defaultPath + "/" + path + "/" + localGroup + "/" + name;
 						String type = "";
 						type = field.get(obj).getClass().toString();
-						// System.out.println("class: " + type + " type: " +
-						// field.getGenericType());
+//						System.out.println("class: " + type + " type: " + field.getGenericType());
 						if (type.equals("class java.lang.Integer")) {
 							writeInt(field.get(obj), name);
 						} else if (type.equals("class java.lang.Long")) {

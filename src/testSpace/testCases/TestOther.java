@@ -60,6 +60,38 @@ public class TestOther {
 		assertEquals(objA.getDataFromObject(), objB.getDataFromObject());
 	}
 	
+	@Test
+	public void testInnerClass() {
+		OuterClass outerObjA = new OuterClass((int)6);
+		OuterClass.InnerClass innerObjA = outerObjA.new InnerClass((int)5);
+		OuterClass outerObjB = new OuterClass();
+		OuterClass.InnerClass innerObjB = outerObjB.new InnerClass();
+		innerObjA.addToX(3);
+		out.writeObject(innerObjA);
+		in.readObject(innerObjB);
+//		System.out.println(innerObjA.getX() + "\t" + innerObjB.getX());
+//		System.out.println(innerObjA.getY() + "\t" + innerObjB.getY());
+//		System.out.println(outerObjA.getX() + "\t" + outerObjB.getX());
+		assertEquals(innerObjA.getX(), innerObjB.getX());
+		assertEquals(innerObjA.getY(), innerObjB.getY());
+		assertEquals(outerObjA.getX(), outerObjB.getX());
+	}
+	
+	@Test
+	public void testOuterClass() {
+		OuterClass outerObjA = new OuterClass((int)6);
+		OuterClass.InnerClass innerObjA = outerObjA.new InnerClass((int)5);
+		OuterClass outerObjB = new OuterClass();
+		OuterClass.InnerClass innerObjB = outerObjB.new InnerClass();
+		out.writeObject(outerObjA);
+		in.readObject(outerObjB);
+//		System.out.println(outerObjA.getX() + "\t" + outerObjB.getX());
+//		System.out.println(innerObjA.getY() + "\t" + innerObjB.getY());
+		assertEquals(outerObjA.getX(), outerObjB.getX());
+//		If you write the outer class object, you will not be writing the inner class object too
+//		If you write the inner class object, you will also write the outer class object
+//		assertEquals(innerObjA.getY(), innerObjB.getY());
+	}
 	
 
 }
