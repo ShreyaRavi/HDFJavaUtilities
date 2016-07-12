@@ -48,10 +48,10 @@ public class testDataA implements HDF5Serializable{
 		charTest = 'h';
 		charArrayTest[0][0] = 'a';
 		charArrayTest[0][1] = 'b';
-		charArrayTest[0][2] = 'a';
-		charArrayTest[1][0] = 'b';
-		charArrayTest[1][1] = 'a';
-		charArrayTest[1][2] = 'b';
+		charArrayTest[0][2] = 'c';
+		charArrayTest[1][0] = 'd';
+		charArrayTest[1][1] = 'e';
+		charArrayTest[1][2] = 'f';
 		listTest.add(4);
 		listTest.add(42);
 		listTest.add(12);

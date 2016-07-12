@@ -290,17 +290,17 @@ public class ObjectInputStream {
 				for (int i = 0; i < dimensions.length; i++) {
 					intDims[i] = Long.valueOf(dimensions[i]).intValue();
 				}
-				if (datatype == Character.TYPE) {
+				if (datatype == char.class) {
 					data = Array.newInstance(int.class, intDims);
 					arr = Array.newInstance(datatype, intDims);
-					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL,
+					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL,
 							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
 							data);
 					copyArrayIntToChar(data, arr);
-				} else if (datatype == Boolean.TYPE) {
+				} else if (datatype == boolean.class) {
 					data = Array.newInstance(int.class, intDims);
 					arr = Array.newInstance(datatype, intDims);
-					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL,
+					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL,
 							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
 							data);
 					copyArrayIntToBool(data, arr);

@@ -35,7 +35,12 @@ public class DataTypeUtils {
 		if (type.contains("java.lang.String")) {
 			return new H5Datatype(Datatype.CLASS_STRING, 1024, -1, -1);
 		}
-		return new H5Datatype(getDataType(type));
+		try {
+			return new H5Datatype(getDataType(type));
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 	/**

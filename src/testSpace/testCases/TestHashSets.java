@@ -30,7 +30,7 @@ public class TestHashSets {
 	@Ignore("Boolean HashSet Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testBoolHashSet() {
-		BoolHashSetTest objA = new BoolHashSetTest(true,false,true);
+		BoolHashSetTest objA = new BoolHashSetTest(true,true,true);
 		BoolHashSetTest objB = new BoolHashSetTest();
 		out.writeObject(objA);
 		in.readObject(objB);

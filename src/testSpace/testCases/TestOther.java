@@ -91,7 +91,6 @@ public class TestOther {
 //		If you write the outer class object, you will not be writing the inner class object too
 //		If you write the inner class object, you will also write the outer class object
 //		assertEquals(innerObjA.getY(), innerObjB.getY());
-	}
-	
+	}	
 
 }

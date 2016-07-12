@@ -4,6 +4,9 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -260,17 +263,20 @@ public class ObjectOutputStream {
 	// TODO: support arrays of wrapper classes (Integer, Long, etc.)
 	private <T> void writeArray(long[] dimensions, Object obj, String name, int HDF5Datatype) {
 		if (HDF5Datatype != -1) {
-			final H5Datatype type = new H5Datatype(HDF5Datatype);
 			Object data;
 			if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
 				data = Array.newInstance(int.class, getDimensions(obj));
 				copyArrayCharToInt(obj, data);
+				HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
 			} else if (HDF5Datatype == HDF5Constants.H5T_NATIVE_HBOOL) {
 				data = Array.newInstance(int.class, getDimensions(obj));
 				copyArrayBoolToInt(obj, data);
+				HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
 			} else {
 				data = obj;
 			}
+			final H5Datatype type = new H5Datatype(HDF5Datatype);
+
 			try {
 				Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name,
 						null, type, dimensions, null, null, 0, null);
@@ -320,10 +326,17 @@ public class ObjectOutputStream {
 
 	// writes a set to a dataset
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private <T> void writeSet(Set set, String name, H5Datatype type) {
-		if (type != null) {
-			T[] data = (T[]) Array.newInstance(set.toArray()[0].getClass(),
-					set.size());
+	private <T> void writeSet(Set set, String name, int HDF5Datatype) {
+		if (HDF5Datatype != -1) {
+			if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
+				set = copySetCharToInt(set);
+				HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
+			} else if (HDF5Datatype == HDF5Constants.H5T_NATIVE_HBOOL){
+				set = copySetBooltoInt(set);
+				HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
+			}
+			H5Datatype type = new H5Datatype(HDF5Datatype);
+			T[] data = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
 			Iterator<T> it = set.iterator();
 			int count = 0;
 			while (it.hasNext()) {
@@ -447,7 +460,7 @@ public class ObjectOutputStream {
 						} else if (type.equals("class java.util.HashSet")
 								|| type.equals("class java.util.TreeSet")
 								|| type.equals("class java.util.LinkedHashSet")) {
-							writeSet((Set) field.get(obj), name, DataTypeUtils.getType(field));
+							writeSet((Set) field.get(obj), name, DataTypeUtils.getDataType(field));
 						} else if (type.equals("class java.util.HashMap")
 								|| type.equals("class java.util.concurrent.ConcurrentHashMap")
 								|| type.equals("class java.util.concurrent.ConcurrentSkipListMap")
@@ -603,6 +616,25 @@ public class ObjectOutputStream {
 			}
 		}
 		return maxLength;
+	}
+	
+	private Set<Integer> copySetCharToInt(Set<Character> set) {
+		Set<Integer> newSet = null;
+		Iterator<Character> itr = set.iterator();
+		while (itr.hasNext()) {
+			newSet.add((Integer)((int)((char)itr.next())));
+		}
+		return newSet;
+	}
+	
+	private Set<Integer> copySetBooltoInt(Set<Boolean> set) {
+		Set<Integer> newSet = null;
+		Iterator<Boolean> itr = set.iterator();
+		while (itr.hasNext()) {
+			int element = ((boolean)itr.next() ? (int)1:(int)0);
+			newSet.add((Integer)element);
+		}
+		return newSet;
 	}
 
 }

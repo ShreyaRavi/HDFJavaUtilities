@@ -63,15 +63,12 @@ public class TestArrays {
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
-	@Ignore("Character Array test: giving an error - detailed in Problem Log")
 	@Test
 	public void testCharArray() {
 		CharArrayTest objA = new CharArrayTest((char)'b',(char)'d',(char)'Z');
 		CharArrayTest objB = new CharArrayTest();
 		out.writeObject(objA);
 		in.readObject(objB);
-		System.out.println((int)objB.getData()[1]);
-		System.out.println((int)objB.getData()[2]);
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
