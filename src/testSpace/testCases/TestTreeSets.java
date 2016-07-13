@@ -27,7 +27,6 @@ public class TestTreeSets {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("Boolean TreeSet Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testBoolTreeSet() {
 		BoolTreeSetTest objA = new BoolTreeSetTest(true,false,true);
@@ -64,7 +63,6 @@ public class TestTreeSets {
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
-	@Ignore("Character TreeSet test: giving an error - need to be converted to numeric")
 	@Test
 	public void testCharTreeSet() {
 		CharTreeSetTest objA = new CharTreeSetTest((char)'b',(char)'d',(char)'Z');

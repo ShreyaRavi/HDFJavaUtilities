@@ -27,7 +27,6 @@ public class TestLinkedLists {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("Boolean LinkedList Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testBoolLinkedList() {
 		BoolLinkedListTest objA = new BoolLinkedListTest(true,false,true);
@@ -64,7 +63,6 @@ public class TestLinkedLists {
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
-	@Ignore("Character LinkedList Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testCharLinkedList() {
 		CharLinkedListTest objA = new CharLinkedListTest((char)'b',(char)'d',(char)'Z');

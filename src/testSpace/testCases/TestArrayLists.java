@@ -27,7 +27,6 @@ public class TestArrayLists {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("Boolean ArrayList Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testBoolArrayList() {
 		BoolArrayListTest objA = new BoolArrayListTest(true,false,true);
@@ -64,7 +63,6 @@ public class TestArrayLists {
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
-	@Ignore("Character ArrayList Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testCharArrayList() {
 		CharArrayListTest objA = new CharArrayListTest((char)'b',(char)'d',(char)'Z');

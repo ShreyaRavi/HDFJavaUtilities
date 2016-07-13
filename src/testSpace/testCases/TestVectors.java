@@ -27,7 +27,6 @@ public class TestVectors {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("Boolean Vector Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testBoolVector() {
 		BoolVectorTest objA = new BoolVectorTest(true,false,true);
@@ -64,7 +63,6 @@ public class TestVectors {
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
-	@Ignore("Character Vector Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testCharVector() {
 		CharVectorTest objA = new CharVectorTest((char)'b',(char)'d',(char)'Z');

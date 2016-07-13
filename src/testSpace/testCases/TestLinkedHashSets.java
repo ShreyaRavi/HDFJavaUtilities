@@ -27,7 +27,6 @@ public class TestLinkedHashSets {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("Boolean LinkedHashSet Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testBoolLinkedHashSet() {
 		BoolLinkedHashSetTest objA = new BoolLinkedHashSetTest(true,false,true);
@@ -64,7 +63,6 @@ public class TestLinkedHashSets {
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
-	@Ignore("Character LinkedHashSet test: giving an error - need to be converted to numeric")
 	@Test
 	public void testCharLinkedHashSet() {
 		CharLinkedHashSetTest objA = new CharLinkedHashSetTest((char)'b',(char)'d',(char)'Z');

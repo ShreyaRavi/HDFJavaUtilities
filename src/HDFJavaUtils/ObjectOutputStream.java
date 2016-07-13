@@ -9,10 +9,17 @@ import java.lang.reflect.Type;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
+import java.util.TreeSet;
+import java.util.Vector;
 
 import HDFJavaUtils.interfaces.HDF5Serializable;
 import HDFJavaUtils.interfaces.Ignore;
@@ -306,17 +313,23 @@ public class ObjectOutputStream {
 			}
 			writeArray(new long[] { dims.length }, dims, name + "/"
 					+ "dimensions", HDF5Constants.H5T_NATIVE_INT);
-			writeList(locations, name + "/" + "info", new H5Datatype(
-					HDF5Constants.H5T_NATIVE_INT));
+			writeList(locations, name + "/" + "info", HDF5Constants.H5T_NATIVE_INT);
 		}
 	}
 
 	// Writes a list to a dataset
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private <T> void writeList(List list, String name, H5Datatype type) {
-		if (type != null) {
-			T[] data = (T[]) Array.newInstance(list.get(0).getClass(),
-					list.size());
+	private <T> void writeList(List list, String name, int HDF5Datatype) {
+		if (HDF5Datatype != -1) {
+			if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
+				list = copyListCharToInt(list);
+				HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
+			} else if (HDF5Datatype == HDF5Constants.H5T_NATIVE_HBOOL) {
+				list = copyListBoolToInt(list);
+				HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
+			}
+			H5Datatype type = new H5Datatype(HDF5Datatype);
+			T[] data = (T[]) Array.newInstance(list.get(0).getClass(), list.size());
 			for (int i = 0; i < list.size(); i++)
 				data[i] = (T) list.get(i);
 			long[] dims = { data.length };
@@ -456,7 +469,7 @@ public class ObjectOutputStream {
 								|| type.equals("class java.util.Stack")
 								|| type.equals("class java.util.ArrayList")
 								|| type.equals("class java.util.LinkedList")) {
-							writeList((List) field.get(obj), name, DataTypeUtils.getType(field));
+							writeList((List) field.get(obj), name, DataTypeUtils.getDataType(field));
 						} else if (type.equals("class java.util.HashSet")
 								|| type.equals("class java.util.TreeSet")
 								|| type.equals("class java.util.LinkedHashSet")) {
@@ -619,22 +632,85 @@ public class ObjectOutputStream {
 	}
 	
 	private Set<Integer> copySetCharToInt(Set<Character> set) {
-		Set<Integer> newSet = null;
+		ArrayList<Integer> list= new ArrayList<Integer>();
 		Iterator<Character> itr = set.iterator();
 		while (itr.hasNext()) {
-			newSet.add((Integer)((int)((char)itr.next())));
+			list.add((Integer)((int)((char)itr.next())));
 		}
+		String type = set.getClass().toString();
+		Set<Integer> newSet = null;
+		if (type.equals("class java.util.HashSet")) {
+			newSet = new HashSet<Integer>(list);
+		} else if (type.equals("class java.util.LinkedHashSet")) {
+			newSet = new LinkedHashSet<Integer>(list);
+		} else if (type.equals("class java.util.TreeSet")) {
+			newSet = new TreeSet<Integer>(list);
+		}
+		System.out.println(newSet);
 		return newSet;
 	}
 	
 	private Set<Integer> copySetBooltoInt(Set<Boolean> set) {
-		Set<Integer> newSet = null;
+		ArrayList<Integer> list= new ArrayList<Integer>();
 		Iterator<Boolean> itr = set.iterator();
 		while (itr.hasNext()) {
 			int element = ((boolean)itr.next() ? (int)1:(int)0);
-			newSet.add((Integer)element);
+			list.add((Integer)element);
 		}
+		String type = set.getClass().toString();
+		Set<Integer> newSet = null;
+		if (type.equals("class java.util.HashSet")) {
+			newSet = new HashSet<Integer>(list);
+		} else if (type.equals("class java.util.LinkedHashSet")) {
+			newSet = new LinkedHashSet<Integer>(list);
+		} else if (type.equals("class java.util.TreeSet")) {
+			newSet = new TreeSet<Integer>(list);
+		}
+		System.out.println(newSet);
 		return newSet;
+	}
+	
+	private List<Integer> copyListCharToInt(List<Character> list) {
+		ArrayList<Integer> tempList = new ArrayList<Integer>();
+		for (int i = 0; i < list.size(); i++) {
+			tempList.add((Integer)((int)((char)list.get(i))));
+		}
+		String type = list.getClass().toString();
+		List<Integer> newList = null;
+		if (type.equals("class java.util.ArrayList")) {
+			newList = new ArrayList<Integer>(tempList);
+		} else if (type.equals("class java.util.LinkedList")) {
+			newList = new LinkedList<Integer>(tempList);
+		} else if (type.equals("class java.util.Vector")) {
+			newList = new Vector<Integer>(tempList);
+		} else if (type.equals("class java.util.Stack")) {
+			newList = new Stack<Integer>();
+			newList.addAll(tempList);
+		}
+		System.out.println(newList);
+		return newList;
+	}
+
+	private List<Integer> copyListBoolToInt(List<Boolean> list) {
+		ArrayList<Integer> tempList = new ArrayList<Integer>();
+		for (int i = 0; i < list.size(); i++) {
+			int element = ((boolean)list.get(i) ? (int)1:(int)0);
+			tempList.add((Integer)element);
+		}
+		String type = list.getClass().toString();
+		List<Integer> newList = null;
+		if (type.equals("class java.util.ArrayList")) {
+			newList = new ArrayList<Integer>(tempList);
+		} else if (type.equals("class java.util.LinkedList")) {
+			newList = new LinkedList<Integer>(tempList);
+		} else if (type.equals("class java.util.Vector")) {
+			newList = new Vector<Integer>(tempList);
+		} else if (type.equals("class java.util.Stack")) {
+			newList = new Stack<Integer>();
+			newList.addAll(tempList);
+		}
+		System.out.println(newList);
+		return newList;
 	}
 
 }

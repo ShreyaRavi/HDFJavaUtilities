@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -388,32 +389,134 @@ public class ObjectInputStream {
 		return cl;
 	}
 
-	private List readList(List list, String name) {
-		Object arr = read(name);
-		try {
-			int count = 0;
-			while (true) {
-				list.add(Array.get(arr, count));
-				count++;
-			}
-		} catch (IndexOutOfBoundsException e) {
+	private List readList(List list, String name, int HDF5Datatype) {
+		if (HDF5Datatype != -1) {
+			Object arr = read(name);
+			try {
+				int count = 0;
+				while (true) {
+					list.add(Array.get(arr, count));
+					count++;
+				}
+			} catch (IndexOutOfBoundsException e) {
 
+			}
+			if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
+				list = copyListIntToChar(list);
+			} else if (HDF5Datatype == HDF5Constants.H5T_NATIVE_HBOOL) {
+				list = copyListIntToBool(list);
+			}
+			return list;
 		}
-		return list;
+		// need to do lists of objects
+		return null;
 	}
 	
-	private Set readSet(Set set, String name) {
-		Object arr = read(name);
-		try {
-			int count = 0;
-			while (true) {
-				set.add(Array.get(arr, count));
-				count++;
-			}
-		} catch (IndexOutOfBoundsException e) {
-
+	private List<Character> copyListIntToChar(List<Integer> list) {
+		ArrayList<Character> tempList = new ArrayList<Character>();
+		for (int i = 0; i < list.size(); i++) {
+			tempList.add((Character)((char)((int)list.get(i))));
 		}
-		return set;
+		String type = list.getClass().toString();
+		List<Character> newList = null;
+		if (type.equals("class java.util.ArrayList")) {
+			newList = new ArrayList<Character>(tempList);
+		} else if (type.equals("class java.util.LinkedList")) {
+			newList = new LinkedList<Character>(tempList);
+		} else if (type.equals("class java.util.Vector")) {
+			newList = new Vector<Character>(tempList);
+		} else if (type.equals("class java.util.Stack")) {
+			newList = new Stack<Character>();
+			newList.addAll(tempList);
+		}
+		System.out.println(newList);
+		return newList;
+	}
+	
+	private List<Boolean> copyListIntToBool(List<Integer> list) {
+		ArrayList<Boolean> tempList = new ArrayList<Boolean>();
+		for (int i = 0; i < list.size(); i++) {
+			boolean element = (list.get(i) == 1 ? true:false);
+			tempList.add(element);
+		}
+		String type = list.getClass().toString();
+		List<Boolean> newList = null;
+		if (type.equals("class java.util.ArrayList")) {
+			newList = new ArrayList<Boolean>(tempList);
+		} else if (type.equals("class java.util.LinkedList")) {
+			newList = new LinkedList<Boolean>(tempList);
+		} else if (type.equals("class java.util.Vector")) {
+			newList = new Vector<Boolean>(tempList);
+		} else if (type.equals("class java.util.Stack")) {
+			newList = new Stack<Boolean>();
+			newList.addAll(tempList);
+		}
+		System.out.println(newList);
+		return newList;
+	}
+	
+//	private 
+	
+	private Set readSet(Set set, String name, int HDF5Datatype) {
+		if (HDF5Datatype != -1) {
+			Object arr = read(name);
+			try {
+				int count = 0;
+				while (true) {
+					set.add(Array.get(arr, count));
+					count++;
+				}
+			} catch (IndexOutOfBoundsException e) {
+
+			}
+			if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
+				set = copySetIntToChar(set);
+			} else if (HDF5Datatype == HDF5Constants.H5T_NATIVE_HBOOL) {
+				set = copySetIntToBool(set);
+			}
+			return set;
+		}
+		// need to do sets of objects
+		return null;
+	}
+	
+	private Set<Character> copySetIntToChar(Set<Integer> set) {
+		ArrayList<Character> list= new ArrayList<Character>();
+		Iterator<Integer> itr = set.iterator();
+		while (itr.hasNext()) {
+			list.add((Character)((char)((int)itr.next())));
+		}
+		String type = set.getClass().toString();
+		Set<Character> newSet = null;
+		if (type.equals("class java.util.HashSet")) {
+			newSet = new HashSet<Character>(list);
+		} else if (type.equals("class java.util.LinkedHashSet")) {
+			newSet = new LinkedHashSet<Character>(list);
+		} else if (type.equals("class java.util.TreeSet")) {
+			newSet = new TreeSet<Character>(list);
+		}
+		System.out.println(newSet);
+		return newSet;
+	}
+	
+	private Set<Boolean> copySetIntToBool(Set<Integer> set) {
+		ArrayList<Boolean> list= new ArrayList<Boolean>();
+		Iterator<Integer> itr = set.iterator();
+		while (itr.hasNext()) {
+			boolean element = (itr.next() == 1 ? true:false);
+			list.add(element);
+		}
+		String type = set.getClass().toString();
+		Set<Boolean> newSet = null;
+		if (type.equals("class java.util.HashSet")) {
+			newSet = new HashSet<Boolean>(list);
+		} else if (type.equals("class java.util.LinkedHashSet")) {
+			newSet = new LinkedHashSet<Boolean>(list);
+		} else if (type.equals("class java.util.TreeSet")) {
+			newSet = new TreeSet<Boolean>(list);
+		}
+		System.out.println(newSet);
+		return newSet;
 	}
 	
 	private Map readMap(Map map, String name) {
@@ -495,19 +598,19 @@ public class ObjectInputStream {
 							field.set(obj, readArray(name, DataTypeUtils.getDataType(field),
 									DataTypeUtils.getArrayType(field.get(obj)),field.get(obj)));
 						} else if (type.equals("class java.util.ArrayList")) {
-							field.set(obj, readList(new ArrayList(), name));
+							field.set(obj, readList(new ArrayList(), name, DataTypeUtils.getDataType(field)));
 						} else if (type.equals("class java.util.LinkedList")) {
-							field.set(obj, readList(new LinkedList(), name));
+							field.set(obj, readList(new LinkedList(), name, DataTypeUtils.getDataType(field)));
 						} else if (type.equals("class java.util.Vector")) {
-							field.set(obj, readList(new Vector(), name));
+							field.set(obj, readList(new Vector(), name, DataTypeUtils.getDataType(field)));
 						} else if (type.equals("class java.util.Stack")) {
-							field.set(obj, readList(new Stack(), name));
+							field.set(obj, readList(new Stack(), name, DataTypeUtils.getDataType(field)));
 						} else if (type.equals("class java.util.HashSet")) {
-							field.set(obj, readSet(new HashSet(), name));
+							field.set(obj, readSet(new HashSet(), name, DataTypeUtils.getDataType(field)));
 						} else if (type.equals("class java.util.TreeSet")) {
-							field.set(obj, readSet(new TreeSet(), name));
+							field.set(obj, readSet(new TreeSet(), name, DataTypeUtils.getDataType(field)));
 						} else if (type.equals("class java.util.LinkedHashSet")) {
-							field.set(obj, readSet(new LinkedHashSet(), name));
+							field.set(obj, readSet(new LinkedHashSet(), name, DataTypeUtils.getDataType(field)));
 						} else if (type.equals("class java.util.HashMap")) {
 							field.set(obj, readMap(new HashMap(), name));
 						} else if (type.equals("class java.util.Hashtable")) {

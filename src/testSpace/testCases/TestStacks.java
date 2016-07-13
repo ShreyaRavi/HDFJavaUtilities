@@ -27,7 +27,6 @@ public class TestStacks {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("Boolean Stack Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testBoolStack() {
 		BoolStackTest objA = new BoolStackTest(true,false,true);
@@ -64,7 +63,6 @@ public class TestStacks {
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
-	@Ignore("Character Stack Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testCharStack() {
 		CharStackTest objA = new CharStackTest((char)'b',(char)'d',(char)'Z');

@@ -27,10 +27,9 @@ public class TestHashSets {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("Boolean HashSet Test: giving an error - need to be converted to numeric")
 	@Test
 	public void testBoolHashSet() {
-		BoolHashSetTest objA = new BoolHashSetTest(true,true,true);
+		BoolHashSetTest objA = new BoolHashSetTest(true,false,true);
 		BoolHashSetTest objB = new BoolHashSetTest();
 		out.writeObject(objA);
 		in.readObject(objB);
@@ -64,7 +63,6 @@ public class TestHashSets {
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
-	@Ignore("Character HashSet test: giving an error - need to be converted to numeric")
 	@Test
 	public void testCharHashSet() {
 		CharHashSetTest objA = new CharHashSetTest((char)'b',(char)'d',(char)'Z');
