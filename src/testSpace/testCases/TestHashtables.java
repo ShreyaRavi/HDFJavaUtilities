@@ -27,7 +27,6 @@ public class TestHashtables {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("boolean and char need to be converted to numeric")
 	@Test
 	public void testBoolCharHashtable() {
 		BoolCharHashtableTest objA = new BoolCharHashtableTest(true, (char) 'b',

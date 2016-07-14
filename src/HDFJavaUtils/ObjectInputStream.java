@@ -291,25 +291,23 @@ public class ObjectInputStream {
 				for (int i = 0; i < dimensions.length; i++) {
 					intDims[i] = Long.valueOf(dimensions[i]).intValue();
 				}
+				arr = Array.newInstance(datatype, intDims);
 				if (datatype == char.class) {
 					data = Array.newInstance(int.class, intDims);
-					arr = Array.newInstance(datatype, intDims);
-					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL,
-							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
-							data);
+					HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
+					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, 
+							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
 					copyArrayIntToChar(data, arr);
 				} else if (datatype == boolean.class) {
 					data = Array.newInstance(int.class, intDims);
-					arr = Array.newInstance(datatype, intDims);
-					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL,
-							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
-							data);
+					HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
+					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, 
+							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
 					copyArrayIntToBool(data, arr);
 				} else {
-					arr = Array.newInstance(datatype, intDims);
-					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL,
-							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
-							arr);
+					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, 
+							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, arr);
+					data = arr;
 				}
 
 				dset.close(dset_id);
@@ -429,7 +427,6 @@ public class ObjectInputStream {
 			newList = new Stack<Character>();
 			newList.addAll(tempList);
 		}
-		System.out.println(newList);
 		return newList;
 	}
 	
@@ -451,7 +448,6 @@ public class ObjectInputStream {
 			newList = new Stack<Boolean>();
 			newList.addAll(tempList);
 		}
-		System.out.println(newList);
 		return newList;
 	}
 	
@@ -495,7 +491,6 @@ public class ObjectInputStream {
 		} else if (type.equals("class java.util.TreeSet")) {
 			newSet = new TreeSet<Character>(list);
 		}
-		System.out.println(newSet);
 		return newSet;
 	}
 	
@@ -515,23 +510,51 @@ public class ObjectInputStream {
 		} else if (type.equals("class java.util.TreeSet")) {
 			newSet = new TreeSet<Boolean>(list);
 		}
-		System.out.println(newSet);
 		return newSet;
 	}
 	
-	private Map readMap(Map map, String name) {
-		Object arrKeys = read(name + "/keys");
-		Object arrVals = read(name + "/values");
-		try {
-			int count = 0;
-			while (true) {
-				map.put(Array.get(arrKeys, count), Array.get(arrVals, count));
-				count++;
+	private Map readMap(Map map, String name, Field field) {
+		String[] split = field.getGenericType().toString().split(",");
+		int datatypeKey = DataTypeUtils.getDataType(split[0]);
+		int datatypeValue = DataTypeUtils.getDataType(split[1]);
+		if (datatypeKey != -1 && datatypeValue != -1) {
+			Object arrKeys = read(name + "/keys");
+			Object arrVals = read(name + "/values");
+			
+			if (datatypeKey == HDF5Constants.H5T_NATIVE_CHAR) {
+				Object data = Array.newInstance(char.class, Array.getLength(arrKeys));
+				copyArrayIntToChar(arrKeys, data);
+				arrKeys = data;
+			} else if (datatypeKey == HDF5Constants.H5T_NATIVE_HBOOL) {
+				Object data = Array.newInstance(boolean.class, Array.getLength(arrKeys));
+				copyArrayIntToBool(arrKeys, data);
+				arrKeys = data;
 			}
-		} catch (IndexOutOfBoundsException e) {
+			
+			if (datatypeValue == HDF5Constants.H5T_NATIVE_CHAR) {
+				Object data = Array.newInstance(char.class, Array.getLength(arrVals));
+				copyArrayIntToChar(arrVals, data);
+				arrVals = data;
+			} else if (datatypeValue == HDF5Constants.H5T_NATIVE_HBOOL) {
+				Object data = Array.newInstance(boolean.class, Array.getLength(arrVals));
+				copyArrayIntToBool(arrVals, data);
+				arrVals = data;
+			}
+//			if (datatypeKey)
+			try {
+				int count = 0;
+				while (true) {
+					map.put(Array.get(arrKeys, count), Array.get(arrVals, count));
+					count++;
+				}
+			} catch (IndexOutOfBoundsException e) {
 
+			}
+			
+			return map;
 		}
-		return map;
+		// need to do maps of objects
+		return null;
 	}
 
 	// Reads the actual Object
@@ -612,17 +635,17 @@ public class ObjectInputStream {
 						} else if (type.equals("class java.util.LinkedHashSet")) {
 							field.set(obj, readSet(new LinkedHashSet(), name, DataTypeUtils.getDataType(field)));
 						} else if (type.equals("class java.util.HashMap")) {
-							field.set(obj, readMap(new HashMap(), name));
+							field.set(obj, readMap(new HashMap(), name,field));
 						} else if (type.equals("class java.util.Hashtable")) {
-							field.set(obj, readMap(new Hashtable(), name));
+							field.set(obj, readMap(new Hashtable(), name, field));
 						} else if (type.equals("class java.util.WeakHashMap")) {
-							field.set(obj, readMap(new WeakHashMap(), name));
+							field.set(obj, readMap(new WeakHashMap(), name, field));
 						} else if (type.equals("class java.util.TreeMap")) {
-							field.set(obj, readMap(new TreeMap(), name));
+							field.set(obj, readMap(new TreeMap(), name, field));
 						} else if (type.equals("class java.util.concurrent.ConcurrentHashMap")) {
-							field.set(obj, readMap(new ConcurrentHashMap(), name));
+							field.set(obj, readMap(new ConcurrentHashMap(), name, field));
 						} else if (type.equals("class java.util.concurrent.ConcurrentSkipListMap")) {
-							field.set(obj, readMap(new ConcurrentSkipListMap(), name));
+							field.set(obj, readMap(new ConcurrentSkipListMap(), name, field));
 						} else if (field.get(obj) instanceof HDF5Serializable
 								&& field.getDeclaringClass() != field.getClass()) {
 							readObjectHelper(field.get(obj), "/" + path + "/" + localGroup);

@@ -27,7 +27,6 @@ public class TestConcurrentSkipListMaps {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("boolean and char need to be converted to numeric")
 	@Test
 	public void testBoolCharConcurrentSkipListMap() {
 		BoolCharConcurrentSkipListMapTest objA = new BoolCharConcurrentSkipListMapTest(

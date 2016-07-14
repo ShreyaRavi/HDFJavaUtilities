@@ -27,11 +27,10 @@ public class TestTreeMaps {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("boolean and char need to be converted to numeric")
 	@Test
 	public void testBoolCharTreeMap() {
-		BoolCharTreeMapTest objA = new BoolCharTreeMapTest(true, (char) 'b',
-				false, (char) 'd', true, (char) 'Z');
+		BoolCharTreeMapTest objA = new BoolCharTreeMapTest(true, (char) 'd',
+				false, (char) 'b', true, (char)'Z');
 		BoolCharTreeMapTest objB = new BoolCharTreeMapTest();
 		out.writeObject(objA);
 		in.readObject(objB);

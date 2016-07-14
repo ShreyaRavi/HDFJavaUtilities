@@ -27,7 +27,7 @@ public class TestHashMaps {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("boolean and char need to be converted to numeric")
+//	@Ignore("boolean and char need to be converted to numeric")
 	@Test
 	public void testBoolCharHashMap() {
 		BoolCharHashMapTest objA = new BoolCharHashMapTest(true, (char) 'b',

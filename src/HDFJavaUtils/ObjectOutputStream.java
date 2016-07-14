@@ -345,7 +345,7 @@ public class ObjectOutputStream {
 				set = copySetCharToInt(set);
 				HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
 			} else if (HDF5Datatype == HDF5Constants.H5T_NATIVE_HBOOL){
-				set = copySetBooltoInt(set);
+				set = copySetBoolToInt(set);
 				HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
 			}
 			H5Datatype type = new H5Datatype(HDF5Datatype);
@@ -364,21 +364,54 @@ public class ObjectOutputStream {
 	// Writes a map to a dataset
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private <T> void writeMap(Map map, String name, Field field) {
-		Set set = map.keySet();
-		T[] vals = (T[]) Array.newInstance(map.get(set.toArray()[0]).getClass(), set.size());
-		long[] dims = { vals.length };
+		Set keySet = map.keySet();
+		List valSet = (List)new ArrayList(map.values());
+//		List valSet = (List)Collections.list(Collections.enumeration(map.values()));
+		long[] dims = { keySet.size() };
 		String[] split = field.getGenericType().toString().split(",");
-		H5Datatype typeKey = DataTypeUtils.getType(split[0]);
-		H5Datatype typeValue = DataTypeUtils.getType(split[1]);
-		if (typeKey != null && typeValue != null) {
-			T[] keys = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
-			Iterator<T> it = set.iterator();
+		int datatypeKey = DataTypeUtils.getDataType(split[0]);
+		int datatypeValue = DataTypeUtils.getDataType(split[1]);
+		if (datatypeKey != -1 && datatypeValue != -1) {
+			if (datatypeKey == HDF5Constants.H5T_NATIVE_CHAR) {
+				keySet = copySetCharToInt(keySet);
+				datatypeKey = HDF5Constants.H5T_NATIVE_INT;
+			} else if (datatypeKey == HDF5Constants.H5T_NATIVE_HBOOL) {
+				keySet = copySetBoolToInt(keySet);
+				datatypeKey = HDF5Constants.H5T_NATIVE_INT;
+			}
+			if (datatypeValue == HDF5Constants.H5T_NATIVE_CHAR) {
+				System.out.println("in here");
+				valSet = copyListCharToInt(valSet);
+				datatypeValue = HDF5Constants.H5T_NATIVE_INT;
+			} else if (datatypeValue == HDF5Constants.H5T_NATIVE_HBOOL) {
+				valSet = copyListBoolToInt(valSet);
+				datatypeValue = HDF5Constants.H5T_NATIVE_INT;
+			}
+			System.out.println("keys: " + keySet);
+			System.out.println("vals: " + valSet);
+//			System.out.println(arrVal[0] + " " + arrVal[1] + " " + arrVal[2]);
+			T[] keys = (T[]) Array.newInstance(keySet.toArray()[0].getClass(), (int)dims[0]);
+			T[] vals = (T[]) Array.newInstance(valSet.toArray()[0].getClass(), (int)dims[0]);
+			Iterator<T> keyItr = keySet.iterator();
+			Iterator<T> valItr = valSet.iterator();
 			int count = 0;
-			while (it.hasNext()) {
-				keys[count] = it.next();
-				vals[count] = (T) map.get(keys[count]);
+//			Set entrySet = map.entrySet();
+//			Iterator<Map.Entry> itr = entrySet.iterator();
+			while (keyItr.hasNext()) {
+//				Map.Entry entry = itr.next();
+//				System.out.println(entry.getKey().getClass());
+				keys[count] = (T)keyItr.next();
+				vals[count] = (T)valItr.next();
 				count++;
 			}
+//			
+//			while (it.hasNext()) {
+//				keys[count] = it.next();
+//				vals[count] = (T) arrVal[count];
+//				count++;
+//			}
+			H5Datatype typeKey = new H5Datatype(datatypeKey);
+			H5Datatype typeValue = new H5Datatype(datatypeValue);
 			try {
 				H5Group group = (H5Group) file.createGroup("/" + name, null);
 				int group_id = group.open();
@@ -638,19 +671,20 @@ public class ObjectOutputStream {
 			list.add((Integer)((int)((char)itr.next())));
 		}
 		String type = set.getClass().toString();
-		Set<Integer> newSet = null;
+		Set<Integer> newSet = new LinkedHashSet<Integer>();
 		if (type.equals("class java.util.HashSet")) {
 			newSet = new HashSet<Integer>(list);
 		} else if (type.equals("class java.util.LinkedHashSet")) {
 			newSet = new LinkedHashSet<Integer>(list);
 		} else if (type.equals("class java.util.TreeSet")) {
 			newSet = new TreeSet<Integer>(list);
+		} else {
+			newSet.addAll(list);
 		}
-		System.out.println(newSet);
 		return newSet;
 	}
 	
-	private Set<Integer> copySetBooltoInt(Set<Boolean> set) {
+	private Set<Integer> copySetBoolToInt(Set<Boolean> set) {
 		ArrayList<Integer> list= new ArrayList<Integer>();
 		Iterator<Boolean> itr = set.iterator();
 		while (itr.hasNext()) {
@@ -658,15 +692,16 @@ public class ObjectOutputStream {
 			list.add((Integer)element);
 		}
 		String type = set.getClass().toString();
-		Set<Integer> newSet = null;
+		Set<Integer> newSet = new LinkedHashSet<Integer>();
 		if (type.equals("class java.util.HashSet")) {
 			newSet = new HashSet<Integer>(list);
 		} else if (type.equals("class java.util.LinkedHashSet")) {
 			newSet = new LinkedHashSet<Integer>(list);
 		} else if (type.equals("class java.util.TreeSet")) {
 			newSet = new TreeSet<Integer>(list);
+		} else {
+			newSet.addAll(list);
 		}
-		System.out.println(newSet);
 		return newSet;
 	}
 	
@@ -676,7 +711,7 @@ public class ObjectOutputStream {
 			tempList.add((Integer)((int)((char)list.get(i))));
 		}
 		String type = list.getClass().toString();
-		List<Integer> newList = null;
+		List<Integer> newList = new ArrayList<Integer>();
 		if (type.equals("class java.util.ArrayList")) {
 			newList = new ArrayList<Integer>(tempList);
 		} else if (type.equals("class java.util.LinkedList")) {
@@ -687,7 +722,6 @@ public class ObjectOutputStream {
 			newList = new Stack<Integer>();
 			newList.addAll(tempList);
 		}
-		System.out.println(newList);
 		return newList;
 	}
 
@@ -698,7 +732,7 @@ public class ObjectOutputStream {
 			tempList.add((Integer)element);
 		}
 		String type = list.getClass().toString();
-		List<Integer> newList = null;
+		List<Integer> newList = new ArrayList<Integer>();
 		if (type.equals("class java.util.ArrayList")) {
 			newList = new ArrayList<Integer>(tempList);
 		} else if (type.equals("class java.util.LinkedList")) {
@@ -709,7 +743,6 @@ public class ObjectOutputStream {
 			newList = new Stack<Integer>();
 			newList.addAll(tempList);
 		}
-		System.out.println(newList);
 		return newList;
 	}
 

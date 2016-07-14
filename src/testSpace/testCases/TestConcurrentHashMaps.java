@@ -27,7 +27,6 @@ public class TestConcurrentHashMaps {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("boolean and char need to be converted to numeric")
 	@Test
 	public void testBoolCharConcurrentHashMap() {
 		BoolCharConcurrentHashMapTest objA = new BoolCharConcurrentHashMapTest(

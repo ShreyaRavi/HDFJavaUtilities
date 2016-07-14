@@ -27,7 +27,6 @@ public class TestWeakHashMaps {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("boolean and char need to be converted to numeric")
 	@Test
 	public void testBoolCharWeakHashMap() {
 		BoolCharWeakHashMapTest objA = new BoolCharWeakHashMapTest(true, (char) 'b',

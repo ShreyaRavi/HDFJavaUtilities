@@ -74,15 +74,21 @@ public class TestMethods {
 		assertEquals((byte)3, in.readByte("Byte"));
 	}
 	
-	@Ignore("cannot override an existing dataset by writing to one with the same name")
 	@Test
 	public void testString() {
+		out.writeString("testString", "String");
+		assertEquals("testString", in.readString("String"));
+	}
+	
+	@Ignore("cannot override an existing dataset by writing to one with the same name -- EXPECTED")
+	@Test
+	public void testOverwrite() {
 		out.writeString("testString", "String");
 		out.writeString("another", "String");
 		assertEquals("testString", in.readString("String"));
 	}
 	
-	@Ignore("can only read as a type that is holds more bits (upcasting)")
+	@Ignore("can only read as a type that is holds more bits (upcasting) -- EXPECTED")
 	@Test
 	public void testTypeMix() {
 		out.writeInt((int)3, "Type");

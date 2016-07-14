@@ -69,8 +69,6 @@ public class TestArrayLists {
 		CharArrayListTest objB = new CharArrayListTest();
 		out.writeObject(objA);
 		in.readObject(objB);
-		System.out.println((int)objB.getData()[1]);
-		System.out.println((int)objB.getData()[2]);
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
