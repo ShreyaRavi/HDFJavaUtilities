@@ -1,19 +1,18 @@
 package testSpace;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import HDFJavaUtils.annotations.SerializeClassOptions;
-import HDFJavaUtils.annotations.SerializeFieldOptions;
-import HDFJavaUtils.annotations.SerializeOptions;
+import HDFJavaUtils.interfaces.SerializeClassOptions;
+import HDFJavaUtils.interfaces.SerializeFieldOptions;
 import HDFJavaUtils.interfaces.HDF5Serializable;
 
-@SerializeClassOptions(path = "Hello", name = "Different Name")
 public class testDataA implements HDF5Serializable{
 	public int integerTest;
 	public long longTest;
@@ -22,12 +21,17 @@ public class testDataA implements HDF5Serializable{
 	private short shortTest;
 	private char charTest;
 	public int[] intArrayTest = {1, 12, 53, 45, 76};
-	public List<Integer> listTest = new LinkedList<Integer>();
+//	public List<Integer> listTest = new ArrayList<Integer>();
+	public List<int[]> listArrayTest = new ArrayList<int[]>();
+	public List<Character> listTest = new ArrayList<Character>();
 	public Set<Integer> setTest = new TreeSet<Integer>();
 	public Map<Integer, Double> mapTest = new HashMap<Integer, Double>();
+	public transient Map<Object, Object> advancedMapTest = new HashMap<Object, Object>();
 	public String stringTest;
 	public byte byteTest;
 	public boolean booleanTest;
+	public Collection[] collectionArrayTest = new Collection[3];
+	public Object[] arrayObjectArrayTest = new Object[3];
 	public testDataB[][] objectArrayTest = new testDataB[2][2];
 	public boolean[][][] boolArrayTest = new boolean[4][2][3];
 	public char[][] charArrayTest = new char[2][3];
@@ -38,6 +42,11 @@ public class testDataA implements HDF5Serializable{
 		longTest = val;
 		doubleTest = val;
 		byteTest = 127;
+		listTest.add('a');
+		listTest.add('d');
+		listArrayTest.add(new int[] {1, 2, 3});
+		listArrayTest.add(new int[] {4, 5, 6});
+		listArrayTest.set(0, null);
 		objectArrayTest[0][0] = new testDataB();
 		objectArrayTest[0][0].test2 = "works";
 		objectArrayTest[1][0] = new testDataB();
@@ -52,9 +61,6 @@ public class testDataA implements HDF5Serializable{
 		charArrayTest[1][0] = 'd';
 		charArrayTest[1][1] = 'e';
 		charArrayTest[1][2] = 'f';
-		listTest.add(4);
-		listTest.add(42);
-		listTest.add(12);
 		setTest.add(3);
 		setTest.add(41);
 		setTest.add(11);
@@ -63,6 +69,13 @@ public class testDataA implements HDF5Serializable{
 		booleanTest = true;
 		stringTest = "Hello World";
 		shortTest = (short) val;
+		collectionArrayTest[0] = listTest;
+		collectionArrayTest[1] = setTest;
+		collectionArrayTest[2] = listArrayTest;
+		arrayObjectArrayTest[0] = objectArrayTest;
+		arrayObjectArrayTest[1] = multiArrTest;
+		arrayObjectArrayTest[2] = boolArrayTest;
+		advancedMapTest.put(collectionArrayTest, arrayObjectArrayTest);
 	}
 	
 	public testDataA() {

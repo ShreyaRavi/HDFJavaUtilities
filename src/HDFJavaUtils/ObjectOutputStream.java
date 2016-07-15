@@ -4,15 +4,19 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
+import java.util.TreeSet;
+import java.util.Vector;
 
 import HDFJavaUtils.interfaces.HDF5Serializable;
 import HDFJavaUtils.interfaces.Ignore;
@@ -21,11 +25,13 @@ import HDFJavaUtils.interfaces.SerializeFieldOptions;
 import ncsa.hdf.hdf5lib.H5;
 import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.hdf5lib.exceptions.HDF5Exception;
+import ncsa.hdf.object.Attribute;
 import ncsa.hdf.object.Dataset;
 import ncsa.hdf.object.Datatype;
+import ncsa.hdf.object.Group;
+import ncsa.hdf.object.HObject;
 import ncsa.hdf.object.h5.H5Datatype;
 import ncsa.hdf.object.h5.H5File;
-import ncsa.hdf.object.h5.H5Group;
 import ncsa.hdf.object.h5.H5ScalarDS;
 
 /**
@@ -39,7 +45,6 @@ public class ObjectOutputStream {
 
 	private H5File file;
 	private String defaultPath;
-	private int maxLength;
 	private int recursiveIterator;
 
 	/**
@@ -106,8 +111,7 @@ public class ObjectOutputStream {
 	 *            The name of the dataset
 	 */
 	public void writeString(String obj, String name) {
-		H5Datatype type = new H5Datatype(Datatype.CLASS_STRING, obj.length(),
-				-1, -1);
+		H5Datatype type = new H5Datatype(Datatype.CLASS_STRING, obj.length(), -1, -1);
 		long[] dims = { 1 };
 		String[] data = { obj };
 		writeData(type, data, dims, name);
@@ -199,7 +203,6 @@ public class ObjectOutputStream {
 	public void writeChar(char val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_CHAR);
 		int[] data = { val };
-		// char[] data = {val};
 		long[] dims = { 1 };
 		writeData(type, data, dims, name);
 	}
@@ -260,8 +263,8 @@ public class ObjectOutputStream {
 		}
 	}
 
-	// TODO: support arrays of wrapper classes (Integer, Long, etc.)
 	private <T> void writeArray(long[] dimensions, Object obj, String name, int HDF5Datatype) {
+		H5Datatype atrType = DataTypeUtils.getType("Integer");
 		if (HDF5Datatype != -1) {
 			Object data;
 			if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
@@ -278,15 +281,21 @@ public class ObjectOutputStream {
 			final H5Datatype type = new H5Datatype(HDF5Datatype);
 
 			try {
-				Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name,
-						null, type, dimensions, null, null, 0, null);
+				Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name, null, type, dimensions, null, null, 0,
+						null);
 				int dset_id = dset.open();
-				H5.H5Dwrite(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL,
-						HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
+				H5.H5Dwrite(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
+						HDF5Constants.H5P_DEFAULT, data);
 				dset.close(dset_id);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+			int[] intDims = new int[dimensions.length];
+			for(int i=0; i<dimensions.length; i++)
+				intDims[i] = (int) dimensions[i];
+			
+			Attribute dimsAttr = new Attribute("dims", atrType, new long[] {intDims.length}, intDims);
+			writeAttribute(name, dimsAttr);
 		} else {
 			int[] dims = getDimensions(obj);
 			int length = 1;
@@ -296,48 +305,121 @@ public class ObjectOutputStream {
 			flattenArray(obj, flat);
 			int index = 0;
 			ArrayList<Integer> locations = new ArrayList<>();
-			locations.add(flat.length);
+			createPath(name, null);
 			for (T i : flat) {
 				if (i != null) {
-					writeObjectHelper(i, name + "/" + index);
+					if (i.getClass().isArray()) {
+						int[] innerDims = getDimensions(i);
+						long[] longDims = new long[innerDims.length];
+						for (int j = 0; j < innerDims.length; j++)
+							longDims[j] = innerDims[j];
+						writeArray(longDims, i, name + "/" + index, DataTypeUtils.getDataType(i));
+					} else if (Collection.class.isAssignableFrom(i.getClass())) {
+						if (List.class.isAssignableFrom(i.getClass()))
+							writeList((List) i, name + "/" + index);
+						else if (Set.class.isAssignableFrom(i.getClass()))
+							writeSet((Set) i, name + "/" + index);
+					} else if (Map.class.isAssignableFrom(i.getClass())) {
+						writeMap((Map) i, name + "/" + index);
+					} else {
+						writeObjectHelper(i, name + "/" + index);
+					}
 					locations.add(index);
+					Datatype attrType = new H5Datatype(Datatype.CLASS_STRING, i.getClass().toString().length() + 1, -1, -1);
+					Attribute classAttr = new Attribute("class", attrType, new long[] {1}, new String[] {i.getClass().getName()});
+					writeAttribute(name +"/" + index, classAttr);
 				}
 				index++;
 			}
-			writeArray(new long[] { dims.length }, dims, name + "/"
-					+ "dimensions", HDF5Constants.H5T_NATIVE_INT);
-			writeList(locations, name + "/" + "info", new H5Datatype(
-					HDF5Constants.H5T_NATIVE_INT));
+			int loc[] = new int[locations.size()];
+			for(int i = 0; i<loc.length; i++)
+				loc[i] = locations.get(i);
+			Attribute dimsAttr = new Attribute("dims", atrType, new long[] {dims.length}, dims);
+			Attribute locationsAttr = new Attribute("locations", atrType, new long[] {locations.size()}, loc);
+			writeAttribute(name, dimsAttr, locationsAttr);
 		}
 	}
 
 	// Writes a list to a dataset
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private <T> void writeList(List list, String name, H5Datatype type) {
+	private <T> void writeList(List list, String name) {
+		Class<?> compType = null;
+		for (Object l : list) {
+			if (l != null) {
+				compType = l.getClass();
+				break;
+			}
+		}
+		int id = DataTypeUtils.getDataType(compType);
+		H5Datatype type;
+		if (id == -1)
+			type = null;
+		else
+			type = new H5Datatype(DataTypeUtils.getDataType(compType));
 		if (type != null) {
-			T[] data = (T[]) Array.newInstance(list.get(0).getClass(),
-					list.size());
+			if (compType.equals(Character.class))
+				list = copyListCharToInt(list);
+			else if (compType.equals(Boolean.class))
+				list = copyListBoolToInt(list);
+			T[] data = (T[]) Array.newInstance(list.get(0).getClass(), list.size());
 			for (int i = 0; i < list.size(); i++)
 				data[i] = (T) list.get(i);
 			long[] dims = { data.length };
 			writeData(type, data, dims, name);
+		} else if (compType != null && compType.isArray()) {
+			createPath(name, "");
+			ArrayList<Integer> locations = new ArrayList<Integer>();
+			for (int i = 0; i < list.size(); i++) {
+				if (list.get(i) != null) {
+					if (compType.isArray())
+						writeArray(new long[] { Array.getLength(list.get(i)) }, list.get(i), name + "/" + i,
+								DataTypeUtils.getDataType(list.get(i).getClass().toString()));
+					else if (List.class.isAssignableFrom(compType))
+						writeList((List) list.get(i), name + "/" + i);
+					else if (Set.class.isAssignableFrom(compType))
+						writeSet((Set) list.get(i), name + "/" + i);
+					else if (Map.class.isAssignableFrom(compType))
+						writeMap((Map) list.get(i), name + "/" + i);
+					else
+						writeObjectHelper(list.get(i), name + "/" + i);
+					locations.add(i);
+					Datatype attrType = new H5Datatype(Datatype.CLASS_STRING, list.get(i).getClass().toString().length() + 1, -1, -1);
+					Attribute classAttr = new Attribute("class", attrType, new long[] {1}, new String[] {list.get(i).getClass().getName()});
+					writeAttribute(name +"/" + i, classAttr);
+				}
+			}
+			H5Datatype atrType = DataTypeUtils.getType("Integer");
+			int loc[] = new int[locations.size()];
+			for(int i = 0; i<loc.length; i++)
+				loc[i] = locations.get(i);
+			Attribute locationsAttr = new Attribute("locations", atrType, new long[] {locations.size()}, loc);
+			writeAttribute(name, locationsAttr);
 		}
 	}
 
 	// writes a set to a dataset
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private <T> void writeSet(Set set, String name, int HDF5Datatype) {
-		if (HDF5Datatype != -1) {
-			if (HDF5Datatype == HDF5Constants.H5T_NATIVE_CHAR) {
-				set = copySetCharToInt(set);
-				HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
-			} else if (HDF5Datatype == HDF5Constants.H5T_NATIVE_HBOOL){
-				set = copySetBooltoInt(set);
-				HDF5Datatype = HDF5Constants.H5T_NATIVE_INT;
+	private <T> void writeSet(Set set, String name) {
+		Iterator<T> it = set.iterator();
+		Class<?> compType = null;
+		for (Object s : set) {
+			if (s != null) {
+				compType = s.getClass();
+				break;
 			}
-			H5Datatype type = new H5Datatype(HDF5Datatype);
+		}
+		int id = DataTypeUtils.getDataType(compType);
+		H5Datatype type;
+		if (id == -1)
+			type = null;
+		else
+			type = new H5Datatype(DataTypeUtils.getDataType(compType));
+		if (type != null) {
+			if (compType.equals(Character.class))
+				set = copySetCharToInt(set);
+			else if (compType.equals(Boolean.class))
+				set = copySetBooltoInt(set);
 			T[] data = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
-			Iterator<T> it = set.iterator();
 			int count = 0;
 			while (it.hasNext()) {
 				data[count] = it.next();
@@ -345,20 +427,56 @@ public class ObjectOutputStream {
 			}
 			long[] dims = { data.length };
 			writeData(type, data, dims, name);
+		} else if (compType != null && compType.isArray()) {
+			createPath(name, "");
+			ArrayList<Integer> locations = new ArrayList<Integer>();
+			int i = 0;
+			while (it.hasNext()) {
+				if (it.next() != null) {
+					Object obj = it.next();
+					if (compType.isArray())
+						writeArray(new long[] { Array.getLength(obj) }, obj, name + "/" + i,
+								DataTypeUtils.getDataType(obj.getClass().toString()));
+					else if (List.class.isAssignableFrom(compType))
+						writeList((List) obj, name + "/" + i);
+					else if (Set.class.isAssignableFrom(compType))
+						writeSet((Set) obj, name + "/" + i);
+					else if (Map.class.isAssignableFrom(compType))
+						writeMap((Map) obj, name + "/" + i);
+					locations.add(i);
+					Datatype attrType = new H5Datatype(Datatype.CLASS_STRING, obj.getClass().toString().length() + 1, -1, -1);
+					Attribute classAttr = new Attribute("class", attrType, new long[] {1}, new String[] {obj.getClass().getName()});
+					writeAttribute(name +"/" + i, classAttr);
+				}
+				i++;
+			}
+			H5Datatype atrType = DataTypeUtils.getType("Integer");
+			int loc[] = new int[locations.size()];
+			for(int j = 0; j<loc.length; j++)
+				loc[j] = locations.get(j);
+			Attribute locationsAttr = new Attribute("locations", atrType, new long[] {locations.size()}, loc);
+			writeAttribute(name, locationsAttr);
 		}
 	}
 
 	// Writes a map to a dataset
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private <T> void writeMap(Map map, String name, Field field) {
+	private <T> void writeMap(Map map, String name) {
 		Set set = map.keySet();
-		T[] vals = (T[]) Array.newInstance(map.get(set.toArray()[0]).getClass(), set.size());
-		long[] dims = { vals.length };
-		String[] split = field.getGenericType().toString().split(",");
-		H5Datatype typeKey = DataTypeUtils.getType(split[0]);
-		H5Datatype typeValue = DataTypeUtils.getType(split[1]);
-		if (typeKey != null && typeValue != null) {
-			T[] keys = (T[]) Array.newInstance(set.toArray()[0].getClass(), set.size());
+		Class<?> valClass = map.get(set.toArray()[0]).getClass();
+		Class<?> keyClass = set.toArray()[0].getClass();
+		if (valClass != null && keyClass != null) {
+			createPath(name, null);
+			int keyID = DataTypeUtils.getDataType(keyClass);
+			int valID = DataTypeUtils.getDataType(valClass);
+			H5Datatype typeKey = null, typeValue = null;
+			if (keyID != -1)
+				typeKey = new H5Datatype(keyID);
+			if (valID != -1)
+				typeValue = new H5Datatype(valID);
+			T[] keys = (T[]) Array.newInstance(keyClass, set.size());
+			T[] vals = (T[]) Array.newInstance(valClass, set.size());
+			long[] dims = { vals.length };
 			Iterator<T> it = set.iterator();
 			int count = 0;
 			while (it.hasNext()) {
@@ -366,22 +484,75 @@ public class ObjectOutputStream {
 				vals[count] = (T) map.get(keys[count]);
 				count++;
 			}
-			try {
-				H5Group group = (H5Group) file.createGroup("/" + name, null);
-				int group_id = group.open();
-				Dataset dsetKeys = (H5ScalarDS) file.createScalarDS("/" + "keys",
-						group, typeKey, dims, null, null, 0, null);
-				Dataset dsetVals = (H5ScalarDS) file.createScalarDS("/" + "values",
-						group, typeValue, dims, null, null, 0, null);
-				int dataset_id_keys = dsetKeys.open();
-				int dataset_id_vals = dsetVals.open();
-				dsetKeys.write(keys);
-				dsetVals.write(vals);
-				dsetKeys.close(dataset_id_keys);
-				dsetVals.close(dataset_id_vals);
-				group.close(group_id);
-			} catch (Exception e) {
-				e.printStackTrace();
+			if (keyID != -1) {
+				if (keyClass.equals(Character.class))
+					copyArrayCharToInt(keys, keys);
+				else if (keyClass.equals(Boolean.class))
+					copyArrayBoolToInt(keys, keys);
+				writeData(typeKey, keys, dims, name + "/" + "keys");
+			} else {
+				ArrayList<Integer> locations = new ArrayList<Integer>();
+				createPath("keys", name);
+				for (int i = 0; i < keys.length; i++) {
+					if (keys[i] != null) {
+						if (keyClass.isArray())
+							writeArray(new long[] { Array.getLength(keys[i]) }, keys[i], name + "/keys/" + i,
+									DataTypeUtils.getDataType(keys[i].getClass().toString()));
+						else if (List.class.isAssignableFrom(keyClass))
+							writeList((List) keys[i], name + "/keys/" + i);
+						else if (Set.class.isAssignableFrom(keyClass))
+							writeSet((Set) keys[i], name + "/keys/" + i);
+						else if (Map.class.isAssignableFrom(keyClass))
+							writeMap((Map) keys[i], name + "/keys/" + i);
+						else
+							writeObjectHelper(keys[i], name + "/keys/" + i);
+						locations.add(i);
+						Datatype attrType = new H5Datatype(Datatype.CLASS_STRING, keys[i].getClass().toString().length() + 1, -1, -1);
+						Attribute classAttr = new Attribute("class", attrType, new long[] {1}, new String[] {keys[i].getClass().getName()});
+						writeAttribute(name +"/" + i, classAttr);
+					}
+				}
+				H5Datatype atrType = DataTypeUtils.getType("Integer");
+				int loc[] = new int[locations.size()];
+				for(int j = 0; j<loc.length; j++)
+					loc[j] = locations.get(j);
+				Attribute locationsAttr = new Attribute("locations", atrType, new long[] {locations.size()}, loc);
+				writeAttribute(name, locationsAttr);
+			}
+			if (valID != -1) {
+				if (valClass.equals(Character.class))
+					copyArrayCharToInt(vals, vals);
+				else if (valClass.equals(Boolean.class))
+					copyArrayBoolToInt(vals, vals);
+				writeData(typeValue, vals, dims, name + "/" + "values");
+			} else {
+				ArrayList<Integer> locations = new ArrayList<Integer>();
+				createPath("values", name);
+				for (int i = 0; i < vals.length; i++) {
+					if (vals[i] != null) {
+						if (valClass.isArray())
+							writeArray(new long[] { Array.getLength(vals[i]) }, vals[i], name + "/values/" + i,
+									DataTypeUtils.getDataType(vals[i].getClass().toString()));
+						else if (List.class.isAssignableFrom(valClass))
+							writeList((List) vals[i], name + "/values/" + i);
+						else if (Set.class.isAssignableFrom(valClass))
+							writeSet((Set) vals[i], name + "/values/" + i);
+						else if (Map.class.isAssignableFrom(valClass))
+							writeMap((Map) vals[i], name + "/values/" + i);
+						else
+							writeObjectHelper(vals[i], name + "/values/" + i);
+						locations.add(i);
+						Datatype attrType = new H5Datatype(Datatype.CLASS_STRING, vals[i].getClass().toString().length() + 1, -1, -1);
+						Attribute classAttr = new Attribute("class", attrType, new long[] {1}, new String[] {vals[i].getClass().getName()});
+						writeAttribute(name +"/" + i, classAttr);
+					}
+				}
+				H5Datatype atrType = DataTypeUtils.getType("Integer");
+				int loc[] = new int[locations.size()];
+				for(int j = 0; j<loc.length; j++)
+					loc[j] = locations.get(j);
+				Attribute locationsAttr = new Attribute("locations", atrType, new long[] {locations.size()}, loc);
+				writeAttribute(name, locationsAttr);
 			}
 		}
 	}
@@ -401,8 +572,7 @@ public class ObjectOutputStream {
 				path += options.path();
 				if (options.name().equals("")) {
 					path += obj.getClass().getSimpleName();
-				}
-				else {
+				} else {
 					path += "/" + options.name();
 				}
 			} else {
@@ -433,7 +603,8 @@ public class ObjectOutputStream {
 						name = defaultPath + "/" + path + "/" + localGroup + "/" + name;
 						String type = "";
 						type = field.get(obj).getClass().toString();
-//						System.out.println("class: " + type + " type: " + field.getGenericType());
+						// System.out.println("class: " + type + " type: " +
+						// field.getGenericType());
 						if (type.equals("class java.lang.Integer")) {
 							writeInt(field.get(obj), name);
 						} else if (type.equals("class java.lang.Long")) {
@@ -452,22 +623,19 @@ public class ObjectOutputStream {
 							writeBoolean(field.getBoolean(obj), name);
 						} else if (type.equals("class java.lang.Byte")) {
 							writeByte(field.getByte(obj), name);
-						} else if (type.equals("class java.util.Vector")
-								|| type.equals("class java.util.Stack")
+						} else if (type.equals("class java.util.Vector") || type.equals("class java.util.Stack")
 								|| type.equals("class java.util.ArrayList")
 								|| type.equals("class java.util.LinkedList")) {
-							writeList((List) field.get(obj), name, DataTypeUtils.getType(field));
-						} else if (type.equals("class java.util.HashSet")
-								|| type.equals("class java.util.TreeSet")
+							writeList((List) field.get(obj), name);
+						} else if (type.equals("class java.util.HashSet") || type.equals("class java.util.TreeSet")
 								|| type.equals("class java.util.LinkedHashSet")) {
-							writeSet((Set) field.get(obj), name, DataTypeUtils.getDataType(field));
+							writeSet((Set) field.get(obj), name);
 						} else if (type.equals("class java.util.HashMap")
 								|| type.equals("class java.util.concurrent.ConcurrentHashMap")
 								|| type.equals("class java.util.concurrent.ConcurrentSkipListMap")
-								|| type.equals("class java.util.WeakHashMap")
-								|| type.equals("class java.util.TreeMap")
+								|| type.equals("class java.util.WeakHashMap") || type.equals("class java.util.TreeMap")
 								|| type.equals("class java.util.Hashtable")) {
-							writeMap((Map) field.get(obj), name, field);
+							writeMap((Map) field.get(obj), name);
 						} else if (field.get(obj) instanceof HDF5Serializable
 								&& field.getDeclaringClass() != field.getClass()) {
 							writeObjectHelper(field.get(obj), "/" + path + "/" + localGroup);
@@ -481,9 +649,10 @@ public class ObjectOutputStream {
 							}
 							writeArray(dims, field.get(obj), name, DataTypeUtils.getDataType(field));
 						}
-					} catch (IllegalArgumentException | IllegalAccessException
-							| SecurityException | NullPointerException e) {
+					} catch (IllegalArgumentException | IllegalAccessException | SecurityException e) {
 						e.printStackTrace();
+					} catch (NullPointerException e) {
+
 					}
 				}
 			}
@@ -493,8 +662,7 @@ public class ObjectOutputStream {
 	// Creates a dataset and writes data to it
 	private void writeData(Datatype type, Object data, long[] dims, String name) {
 		try {
-			Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name, null,
-					type, dims, null, null, 0, null);
+			Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name, null, type, dims, null, null, 0, null);
 			int dataset_id = dset.open();
 			dset.write(data);
 			dset.close(dataset_id);
@@ -509,15 +677,16 @@ public class ObjectOutputStream {
 			return null;
 		Object obj = arr;
 		Class<?> cl = arr.getClass();
-		int ndim = 0;
-		while (cl.isArray()) {
-			cl = cl.getComponentType();
-			ndim++;
-		}
+		 int ndim = obj.getClass().toString().length() - obj.getClass().toString().replace("[", "").length();
+		//int ndim = 0;
+//		while (cl.isArray()) {
+//			cl = cl.getComponentType();
+//			ndim++;
+//		}
 		cl = arr.getClass();
 		int[] dims = new int[ndim];
 		ndim = 0;
-		while (cl.isArray()) {
+		for (int i : dims) {
 			dims[ndim] = -1;
 			if (obj != null) {
 				int length = Array.getLength(obj);
@@ -567,8 +736,11 @@ public class ObjectOutputStream {
 		if (obj == null)
 			return Void.TYPE;
 		Class<?> cl = obj.getClass();
-		while (cl.isArray())
+		int size = cl.toString().length() - cl.toString().replace("[", "").length();
+		while (size > 0) {
 			cl = cl.getComponentType();
+			size--;
+		}
 		return cl;
 	}
 
@@ -581,7 +753,9 @@ public class ObjectOutputStream {
 			base = "/" + basePath + "/";
 		for (String str : groupPath) {
 			try {
-				file.createGroup(base + str, null);
+				Group grp = file.createGroup(base + str, null);
+				int test = H5.H5Gopen(file.getFID(), base + str, HDF5Constants.H5P_DEFAULT);
+
 				base += str + "/";
 			} catch (Exception e) {
 				// e.printStackTrace();
@@ -590,12 +764,40 @@ public class ObjectOutputStream {
 		}
 	}
 
+	private void writeAttribute(String name, Attribute ...attr) {
+		HObject obj = null;
+		try {
+			obj = file.get(name);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		if (obj != null) {
+			try {
+				for(Attribute a : attr)
+					file.writeAttribute(obj, a, false);
+			} catch (HDF5Exception e) {
+				e.printStackTrace();
+			}
+		} 
+	}
+
 	private void flattenArray(Object original, Object flattened) {
+		recursiveIterator = 0;
+		String compType = "" + original.getClass();
+		int size = compType.length() - compType.replace("[", "").length();
+		flattenArrayRecursiveHelper(original, flattened, size);
+	}
+
+	private void flattenArrayRecursiveHelper(Object original, Object flattened, int count) {
 		int n = Array.getLength(original);
-		for (int i = 0; i < n; i++) {
+		for (int i = 0, max = count; i < n; i++, count = max) {
 			Object e = Array.get(original, i);
-			if (e != null && e.getClass().isArray()) {
-				flattenArray(e, flattened);
+			count--;
+			if (e != null && count > 0) {
+				// count--;
+				if (count > 0)
+					flattenArrayRecursiveHelper(e, flattened, count);
+
 			} else {
 				Array.set(flattened, recursiveIterator, Array.get(original, i));
 				recursiveIterator++;
@@ -603,38 +805,81 @@ public class ObjectOutputStream {
 		}
 	}
 
-	// Returns the max length of all strings in an n-dimensional array
-	private int maxStringLength(Object obj) {
-		int n = Array.getLength(obj);
-		for (int i = 0; i < n; i++) {
-			Object arr = Array.get(obj, i);
-			if (arr != null && arr.getClass().isArray()) {
-				maxStringLength(arr);
-			} else {
-				int strLength = ((String) arr).length();
-				maxLength = Math.max(maxLength, strLength);
-			}
-		}
-		return maxLength;
-	}
-	
 	private Set<Integer> copySetCharToInt(Set<Character> set) {
-		Set<Integer> newSet = null;
+		ArrayList<Integer> list = new ArrayList<Integer>();
 		Iterator<Character> itr = set.iterator();
 		while (itr.hasNext()) {
-			newSet.add((Integer)((int)((char)itr.next())));
+			list.add((Integer) ((int) ((char) itr.next())));
+		}
+		String type = set.getClass().toString();
+		Set<Integer> newSet = null;
+		if (type.equals("class java.util.HashSet")) {
+			newSet = new HashSet<Integer>(list);
+		} else if (type.equals("class java.util.LinkedHashSet")) {
+			newSet = new LinkedHashSet<Integer>(list);
+		} else if (type.equals("class java.util.TreeSet")) {
+			newSet = new TreeSet<Integer>(list);
 		}
 		return newSet;
 	}
-	
+
 	private Set<Integer> copySetBooltoInt(Set<Boolean> set) {
-		Set<Integer> newSet = null;
+		ArrayList<Integer> list = new ArrayList<Integer>();
 		Iterator<Boolean> itr = set.iterator();
 		while (itr.hasNext()) {
-			int element = ((boolean)itr.next() ? (int)1:(int)0);
-			newSet.add((Integer)element);
+			int element = ((boolean) itr.next() ? (int) 1 : (int) 0);
+			list.add((Integer) element);
 		}
+		String type = set.getClass().toString();
+		Set<Integer> newSet = null;
+		if (type.equals("class java.util.HashSet"))
+			newSet = new HashSet<Integer>(list);
+		else if (type.equals("class java.util.LinkedHashSet"))
+			newSet = new LinkedHashSet<Integer>(list);
+		else if (type.equals("class java.util.TreeSet"))
+			newSet = new TreeSet<Integer>(list);
 		return newSet;
+	}
+
+	private List<Integer> copyListCharToInt(List<Character> list) {
+		ArrayList<Integer> tempList = new ArrayList<Integer>();
+		for (int i = 0; i < list.size(); i++) {
+			tempList.add((Integer) ((int) ((char) list.get(i))));
+		}
+		String type = list.getClass().toString();
+		List<Integer> newList = null;
+		if (type.equals("class java.util.ArrayList")) {
+			newList = new ArrayList<Integer>(tempList);
+		} else if (type.equals("class java.util.LinkedList")) {
+			newList = new LinkedList<Integer>(tempList);
+		} else if (type.equals("class java.util.Vector")) {
+			newList = new Vector<Integer>(tempList);
+		} else if (type.equals("class java.util.Stack")) {
+			newList = new Stack<Integer>();
+			newList.addAll(tempList);
+		}
+		return newList;
+	}
+
+	private List<Integer> copyListBoolToInt(List<Boolean> list) {
+		ArrayList<Integer> tempList = new ArrayList<Integer>();
+		for (int i = 0; i < list.size(); i++) {
+			int element = ((boolean) list.get(i) ? (int) 1 : (int) 0);
+			tempList.add((Integer) element);
+		}
+		String type = list.getClass().toString();
+		List<Integer> newList = null;
+		if (type.equals("class java.util.ArrayList")) {
+			newList = new ArrayList<Integer>(tempList);
+		} else if (type.equals("class java.util.LinkedList")) {
+			newList = new LinkedList<Integer>(tempList);
+		} else if (type.equals("class java.util.Vector")) {
+			newList = new Vector<Integer>(tempList);
+		} else if (type.equals("class java.util.Stack")) {
+			newList = new Stack<Integer>();
+			newList.addAll(tempList);
+		}
+		return newList;
 	}
 
 }

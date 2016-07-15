@@ -2,12 +2,17 @@ package HDFJavaUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,9 +32,10 @@ import HDFJavaUtils.interfaces.SerializeClassOptions;
 import HDFJavaUtils.interfaces.SerializeFieldOptions;
 import ncsa.hdf.hdf5lib.H5;
 import ncsa.hdf.hdf5lib.HDF5Constants;
+import ncsa.hdf.object.Attribute;
 import ncsa.hdf.object.Dataset;
+import ncsa.hdf.object.HObject;
 import ncsa.hdf.object.h5.H5File;
-import testSpace.testDataB;
 
 /**
  * The HDF5Util's ObjectOutputStream is a mirror to Java's ObjectInputStream The
@@ -43,6 +49,10 @@ public class ObjectInputStream {
 	private H5File file;
 	private String defaultPath;
 	private int recursionIterator;
+	private static final Set<Class<?>> WRAPPER_TYPE = new HashSet<Class<?>>(Arrays.asList(new Class<?>[] {
+			Boolean.class, Character.class, Integer.class, Short.class, Long.class, Float.class, Double.class }));
+	private static final Set<Class<?>> PRIMITIVE_TYPE = new HashSet<Class<?>>(Arrays.asList(new Class<?>[] {
+			boolean.class, char.class, int.class, short.class, long.class, float.class, double.class }));
 
 	/**
 	 * Constructor for the class, the user is required to input a H5File
@@ -273,71 +283,6 @@ public class ObjectInputStream {
 		readObjectHelper(obj, path);
 	}
 
-	// Reads in an array
-	private <T> Object readArray(String name, int HDF5Datatype,
-			Class<?> datatype, Object obj) {
-		if (datatype != null) {
-			try {
-				Dataset dset = (Dataset) file.get(name);
-				int dset_id = dset.open();
-				Object arr;
-				Object data;
-
-				dset.getMetadata();
-				long[] dimensions = dset.getDims();
-
-				int[] intDims = new int[dimensions.length];
-				for (int i = 0; i < dimensions.length; i++) {
-					intDims[i] = Long.valueOf(dimensions[i]).intValue();
-				}
-				if (datatype == char.class) {
-					data = Array.newInstance(int.class, intDims);
-					arr = Array.newInstance(datatype, intDims);
-					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL,
-							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
-							data);
-					copyArrayIntToChar(data, arr);
-				} else if (datatype == boolean.class) {
-					data = Array.newInstance(int.class, intDims);
-					arr = Array.newInstance(datatype, intDims);
-					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL,
-							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
-							data);
-					copyArrayIntToBool(data, arr);
-				} else {
-					arr = Array.newInstance(datatype, intDims);
-					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL,
-							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT,
-							arr);
-				}
-
-				dset.close(dset_id);
-				return arr;
-			} catch (Exception e) {
-				e.printStackTrace();
-				return null;
-			}
-		} else {
-			try {
-				int[] info = (int[]) read(name + "/" + "info");
-				int[] dims = (int[]) read(name + "/" + "dimensions");
-				Class<?> cl = getBaseClass(obj);
-				Object objectArray = Array.newInstance(cl, dims);
-				T[] flatArray = (T[]) Array.newInstance(cl, info[0]);
-				for (int i = 1; i < info.length; i++) {
-					Array.set(flatArray, info[i], cl.newInstance());
-					readObjectHelper(flatArray[info[i]], name + "/" + info[i]);
-				}
-				curlArray(flatArray, objectArray);
-				return objectArray;
-			} catch (Exception e) {
-				e.printStackTrace();
-				return null;
-			}
-		}
-
-	}
-
 	// Converts an Int array to a char array
 	private static void copyArrayIntToChar(Object original, Object copy) {
 		int n = Array.getLength(original);
@@ -383,25 +328,214 @@ public class ObjectInputStream {
 		if (obj == null)
 			return Void.TYPE;
 		Class<?> cl = obj.getClass();
-		while (cl.isArray())
+		int size = cl.toString().length() - cl.toString().replace("[", "").length();
+		while (size > 0) {
 			cl = cl.getComponentType();
+			size--;
+		}
 		return cl;
 	}
 
-	private List readList(List list, String name) {
-		Object arr = read(name);
-		try {
-			int count = 0;
-			while (true) {
-				list.add(Array.get(arr, count));
-				count++;
-			}
-		} catch (IndexOutOfBoundsException e) {
+	private Set<Character> copySetIntToChar(Set<Integer> set) {
+		ArrayList<Character> list = new ArrayList<Character>();
+		Iterator<Integer> itr = set.iterator();
+		while (itr.hasNext()) {
+			list.add((Character) ((char) ((int) itr.next())));
+		}
+		String type = set.getClass().toString();
+		Set<Character> newSet = null;
+		if (type.equals("class java.util.HashSet")) {
+			newSet = new HashSet<Character>(list);
+		} else if (type.equals("class java.util.LinkedHashSet")) {
+			newSet = new LinkedHashSet<Character>(list);
+		} else if (type.equals("class java.util.TreeSet")) {
+			newSet = new TreeSet<Character>(list);
+		}
+		return newSet;
+	}
 
+	private Set<Boolean> copySetIntToBool(Set<Integer> set) {
+		ArrayList<Boolean> list = new ArrayList<Boolean>();
+		Iterator<Integer> itr = set.iterator();
+		while (itr.hasNext()) {
+			boolean element = (itr.next() == 1 ? true : false);
+			list.add(element);
+		}
+		String type = set.getClass().toString();
+		Set<Boolean> newSet = null;
+		if (type.equals("class java.util.HashSet")) {
+			newSet = new HashSet<Boolean>(list);
+		} else if (type.equals("class java.util.LinkedHashSet")) {
+			newSet = new LinkedHashSet<Boolean>(list);
+		} else if (type.equals("class java.util.TreeSet")) {
+			newSet = new TreeSet<Boolean>(list);
+		}
+		return newSet;
+	}
+
+	private List<Character> copyListIntToChar(List<Integer> list) {
+		ArrayList<Character> tempList = new ArrayList<Character>();
+		for (int i = 0; i < list.size(); i++) {
+			tempList.add((Character) ((char) ((int) list.get(i))));
+		}
+		String type = list.getClass().toString();
+		List<Character> newList = null;
+		if (type.equals("class java.util.ArrayList")) {
+			newList = new ArrayList<Character>(tempList);
+		} else if (type.equals("class java.util.LinkedList")) {
+			newList = new LinkedList<Character>(tempList);
+		} else if (type.equals("class java.util.Vector")) {
+			newList = new Vector<Character>(tempList);
+		} else if (type.equals("class java.util.Stack")) {
+			newList = new Stack<Character>();
+			newList.addAll(tempList);
+		}
+		return newList;
+	}
+
+	private List<Boolean> copyListIntToBool(List<Integer> list) {
+		ArrayList<Boolean> tempList = new ArrayList<Boolean>();
+		for (int i = 0; i < list.size(); i++) {
+			boolean element = (list.get(i) == 1 ? true : false);
+			tempList.add(element);
+		}
+		String type = list.getClass().toString();
+		List<Boolean> newList = null;
+		if (type.equals("class java.util.ArrayList")) {
+			newList = new ArrayList<Boolean>(tempList);
+		} else if (type.equals("class java.util.LinkedList")) {
+			newList = new LinkedList<Boolean>(tempList);
+		} else if (type.equals("class java.util.Vector")) {
+			newList = new Vector<Boolean>(tempList);
+		} else if (type.equals("class java.util.Stack")) {
+			newList = new Stack<Boolean>();
+			newList.addAll(tempList);
+		}
+		return newList;
+	}
+
+	// Reads in an array
+	private <T> Object readArray(String name, int HDF5Datatype, Object obj) {
+		recursionIterator = 0;
+		Class<?> datatype = DataTypeUtils.getArrayType(obj);
+		if (datatype != null) {
+			try {
+				Dataset dset = (Dataset) file.get(name);
+				int dset_id = dset.open();
+				Object arr;
+				Object data;
+
+				dset.getMetadata();
+				long[] dimensions = dset.getDims();
+				int[] intDims = new int[dimensions.length];
+				for (int i = 0; i < dimensions.length; i++) {
+					intDims[i] = Long.valueOf(dimensions[i]).intValue();
+				}
+				if (datatype == char.class) {
+					data = Array.newInstance(int.class, intDims);
+					arr = Array.newInstance(datatype, intDims);
+					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
+							HDF5Constants.H5P_DEFAULT, data);
+					copyArrayIntToChar(data, arr);
+				} else if (datatype == boolean.class) {
+					data = Array.newInstance(int.class, intDims);
+					arr = Array.newInstance(datatype, intDims);
+					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
+							HDF5Constants.H5P_DEFAULT, data);
+					copyArrayIntToBool(data, arr);
+				} else {
+					arr = Array.newInstance(datatype, intDims);
+					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
+							HDF5Constants.H5P_DEFAULT, arr);
+				}
+
+				dset.close(dset_id);
+				return arr;
+			} catch (Exception e) {
+				e.printStackTrace();
+				return null;
+			}
+		} else {
+			try {
+				List<Attribute> attr = getObjectAttributes(name);
+				int dims[] = getAttributeDims(attr);
+				int info[] = getAttributeLocations(attr);
+				int length = 1;
+				for (int i : dims)
+					length *= i;
+				Class<?> cl = getBaseClass(obj);
+				System.out.println(Arrays.toString(dims) + length);
+				Object objectArray = Array.newInstance(cl, dims);
+				T[] flatArray = (T[]) Array.newInstance(cl, length);
+				for (int i = 0, j = 0; i <= info[info.length-1]; i++) {
+					if (info[j] == i) {
+						attr = getObjectAttributes(name + "/" + info[j]);
+						String objClass = getAttributeClass(attr);
+						cl = Class.forName(objClass);
+						if (cl.isArray()) {
+							System.out.println(cl);
+							Object arr = Array.newInstance(cl, getAttributeDims(attr));
+							Array.set(flatArray, info[j],
+									readArray(name + "/" + info[j], DataTypeUtils.getDataType(getBaseClass(arr)), arr));
+						} else if (Collection.class.isAssignableFrom(cl)) {
+							if (List.class.isAssignableFrom(cl)) {
+
+							} else if (Set.class.isAssignableFrom(cl)) {
+
+							}
+						} else if (Map.class.isAssignableFrom(cl)) {
+
+						} else {
+							Array.set(flatArray, info[j], cl.newInstance());
+							readObjectHelper(flatArray[info[j]], name + "/" + info[j]);
+						}
+						j++;
+					} else {
+						Array.set(flatArray, i, null);
+					}
+				}
+				curlArray(flatArray, objectArray);
+				return objectArray;
+			} catch (Exception e) {
+				e.printStackTrace();
+				return null;
+			}
+		}
+
+	}
+
+	private List readList(List list, String name, Field field) {
+		// Type compType = field.getGenericType();
+		ParameterizedType type = (ParameterizedType) field.getGenericType();
+		Class<?> cl = (Class<?>) type.getActualTypeArguments()[0];
+		if (WRAPPER_TYPE.contains(cl)) {
+			Object arr = read(name);
+			try {
+				int count = 0;
+				while (true) {
+					list.add(Array.get(arr, count));
+					count++;
+				}
+			} catch (IndexOutOfBoundsException e) {
+
+			}
+			return list;
+		} else if (cl.isArray()) {
+			List<Attribute> attr = getObjectAttributes(name);
+			int[] info = (int[]) attr.get(0).getValue();
+			for (int i = 0, c = 0; i <= info[info.length - 1]; i++) {
+				if (i == info[c]) {
+					list.add(readArray(name + "/" + info[c], DataTypeUtils.getDataType(cl.getComponentType()),
+							Array.newInstance(cl.getComponentType(), 1)));
+					c++;
+				} else {
+					list.add(null);
+				}
+			}
 		}
 		return list;
 	}
-	
+
 	private Set readSet(Set set, String name) {
 		Object arr = read(name);
 		try {
@@ -415,7 +549,7 @@ public class ObjectInputStream {
 		}
 		return set;
 	}
-	
+
 	private Map readMap(Map map, String name) {
 		Object arrKeys = read(name + "/keys");
 		Object arrVals = read(name + "/values");
@@ -431,7 +565,38 @@ public class ObjectInputStream {
 		return map;
 	}
 
-	// Reads the actual Object
+	private List<Attribute> getObjectAttributes(String name) {
+		try {
+			HObject obj = file.get(name);
+			int id = obj.getFID();
+			return obj.getMetadata();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	private int[] getAttributeDims(List<Attribute> attr) {
+		for (Attribute a : attr)
+			if (a.getName().equals("dims"))
+				return (int[]) a.getValue();
+		return null;
+	}
+
+	private int[] getAttributeLocations(List<Attribute> attr) {
+		for (Attribute a : attr)
+			if (a.getName().equals("locations"))
+				return (int[]) a.getValue();
+		return null;
+	}
+
+	private String getAttributeClass(List<Attribute> attr) {
+		for (Attribute a : attr)
+			if (a.getName().equals("class"))
+				return (String) Array.get(a.getValue(), 0);
+		return null;
+	}
+
 	private <T> void readObjectHelper(Object obj, String group) {
 		if (obj != null && obj instanceof HDF5Serializable) {
 			recursionIterator = 0;
@@ -483,8 +648,8 @@ public class ObjectInputStream {
 							field.setShort(obj, readShort(name));
 						} else if (type.equals("class java.lang.Character")) {
 							field.setChar(obj, readChar(name));
-//						} else if (type.equals("class [C")) {
-//							field.set(obj, readCharArray(name));
+							// } else if (type.equals("class [C")) {
+							// field.set(obj, readCharArray(name));
 						} else if (type.equals("class java.lang.String")) {
 							field.set(obj, readString(name));
 						} else if (type.equals("class java.lang.Boolean")) {
@@ -492,16 +657,18 @@ public class ObjectInputStream {
 						} else if (type.equals("class java.lang.Byte")) {
 							field.set(obj, readByte(name));
 						} else if (type.contains("[")) {
-							field.set(obj, readArray(name, DataTypeUtils.getDataType(field),
-									DataTypeUtils.getArrayType(field.get(obj)),field.get(obj)));
+							field.set(obj, readArray(name, DataTypeUtils.getDataType(field), field.get(obj)));
 						} else if (type.equals("class java.util.ArrayList")) {
-							field.set(obj, readList(new ArrayList(), name));
+							field.set(obj, readList((ArrayList) field.get(obj), name, field));
 						} else if (type.equals("class java.util.LinkedList")) {
-							field.set(obj, readList(new LinkedList(), name));
+							// field.set(obj, readList(new LinkedList(), name,
+							// field));
 						} else if (type.equals("class java.util.Vector")) {
-							field.set(obj, readList(new Vector(), name));
+							// field.set(obj, readList(new Vector(), name,
+							// field));
 						} else if (type.equals("class java.util.Stack")) {
-							field.set(obj, readList(new Stack(), name));
+							// field.set(obj, readList(new Stack(), name,
+							// field));
 						} else if (type.equals("class java.util.HashSet")) {
 							field.set(obj, readSet(new HashSet(), name));
 						} else if (type.equals("class java.util.TreeSet")) {

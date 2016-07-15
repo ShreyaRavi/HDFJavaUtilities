@@ -36,11 +36,43 @@ public class DataTypeUtils {
 			return new H5Datatype(Datatype.CLASS_STRING, 1024, -1, -1);
 		}
 		try {
-			return new H5Datatype(getDataType(type));
+			int dataType = getDataType(type);
+			if(dataType == -1)
+				return null;
+			return new H5Datatype(dataType);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
 		}
+	}
+	
+	/**
+	 * Gets the HDF5Constant that corresponds with the type of input data
+	 * 
+	 * @param type
+	 *            The name of the class of the input data/object
+	 * @return An int that represents the HDF5Constant that represents the type
+	 *         of input data
+	 */
+	public static int getDataType(Class<?> type) {
+		if (type.equals(int.class) || type.equals(Integer.class))
+			return HDF5Constants.H5T_NATIVE_INT;
+		else if (type.equals(char.class)|| type.equals(Character.class))
+			return HDF5Constants.H5T_NATIVE_CHAR;
+		else if (type.equals(byte.class)|| type.equals(Byte.class))
+			return HDF5Constants.H5T_NATIVE_INT8;
+		else if (type.equals(short.class)|| type.equals(Short.class))
+			return HDF5Constants.H5T_NATIVE_SHORT;
+		else if (type.equals(double.class)|| type.equals(Double.class))
+			return HDF5Constants.H5T_NATIVE_DOUBLE;
+		else if (type.equals(long.class)|| type.equals(Long.class))
+			return HDF5Constants.H5T_NATIVE_LONG;
+		else if (type.equals(float.class)|| type.equals(Float.class))
+			return HDF5Constants.H5T_NATIVE_FLOAT;
+		else if (type.equals(boolean.class)|| type.equals(Boolean.class))
+			return HDF5Constants.H5T_NATIVE_HBOOL;
+		else
+			return -1;
 	}
 
 	/**
@@ -73,9 +105,6 @@ public class DataTypeUtils {
 		else if ((type.lastIndexOf("[F") == (type.length() - 2))
 				|| type.contains("Float"))
 			return HDF5Constants.H5T_NATIVE_FLOAT;
-		else if ((type.lastIndexOf("[B") == (type.length() - 2))
-				|| type.contains("Byte"))
-			return HDF5Constants.H5T_NATIVE_CHAR;
 		else if ((type.lastIndexOf("[Z") == (type.length() - 2))
 				|| type.contains("Boolean"))
 			return HDF5Constants.H5T_NATIVE_HBOOL;
