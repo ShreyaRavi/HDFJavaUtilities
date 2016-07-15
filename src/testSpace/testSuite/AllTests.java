@@ -25,7 +25,8 @@ import testSpace.testCases.*;
 	TestWeakHashMaps.class,
 	TestTreeMaps.class,
 	TestHashtables.class,
-	TestMethods.class
+	TestMethods.class,
+	TestAnnotations.class
 				})
 public class AllTests {
 

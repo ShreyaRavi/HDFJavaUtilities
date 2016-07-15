@@ -433,7 +433,15 @@ public class ObjectInputStream {
 	private List<Boolean> copyListIntToBool(List<Integer> list) {
 		ArrayList<Boolean> tempList = new ArrayList<Boolean>();
 		for (int i = 0; i < list.size(); i++) {
-			boolean element = (list.get(i) == 1 ? true:false);
+			boolean element;
+			if (list.get(i) == 1) {
+				element = true;
+			} else if (list.get(i) == 0) {
+				element = false;
+			} else {
+				element = false;
+				System.out.println("there has been an error converting int to booelan");
+			}
 			tempList.add(element);
 		}
 		String type = list.getClass().toString();
@@ -498,7 +506,15 @@ public class ObjectInputStream {
 		ArrayList<Boolean> list= new ArrayList<Boolean>();
 		Iterator<Integer> itr = set.iterator();
 		while (itr.hasNext()) {
-			boolean element = (itr.next() == 1 ? true:false);
+			boolean element;
+			if (itr.next() == 1) {
+				element = true;
+			} else if (itr.next() == 0) {
+				element = false;
+			} else {
+				element = false;
+				System.out.println("there has been an error conveting int to boolean");
+			}
 			list.add(element);
 		}
 		String type = set.getClass().toString();
@@ -588,12 +604,13 @@ public class ObjectInputStream {
 				if (anno != null) {
 					name = fieldOptions.name();
 					localGroup = fieldOptions.path();
+					System.out.println(localGroup);
 					dims = fieldOptions.dimensions();
 				}
 				if (!Modifier.isTransient(field.getModifiers()) && !field.isAnnotationPresent(Ignore.class)) {
 					try {
 						String type = field.get(obj).getClass().toString();
-						if (name == "") {
+						if (name.equals("")) {
 							name = field.getName();
 						}
 						name = defaultPath + "/" + path + "/" + localGroup + "/" + name;

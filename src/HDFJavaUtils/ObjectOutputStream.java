@@ -1,15 +1,9 @@
 package HDFJavaUtils;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.AbstractSet;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -286,11 +280,11 @@ public class ObjectOutputStream {
 
 			try {
 				Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name,
-						null, type, dimensions, null, null, 0, null);
-				int dset_id = dset.open();
-				H5.H5Dwrite(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL,
-						HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
-				dset.close(dset_id);
+						null, type, dimensions, null, null, 0, null, data);
+//				int dset_id = dset.open();
+//				H5.H5Dwrite(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL,
+//						HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
+//				dset.close(dset_id);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -380,36 +374,22 @@ public class ObjectOutputStream {
 				datatypeKey = HDF5Constants.H5T_NATIVE_INT;
 			}
 			if (datatypeValue == HDF5Constants.H5T_NATIVE_CHAR) {
-				System.out.println("in here");
 				valSet = copyListCharToInt(valSet);
 				datatypeValue = HDF5Constants.H5T_NATIVE_INT;
 			} else if (datatypeValue == HDF5Constants.H5T_NATIVE_HBOOL) {
 				valSet = copyListBoolToInt(valSet);
 				datatypeValue = HDF5Constants.H5T_NATIVE_INT;
 			}
-			System.out.println("keys: " + keySet);
-			System.out.println("vals: " + valSet);
-//			System.out.println(arrVal[0] + " " + arrVal[1] + " " + arrVal[2]);
 			T[] keys = (T[]) Array.newInstance(keySet.toArray()[0].getClass(), (int)dims[0]);
 			T[] vals = (T[]) Array.newInstance(valSet.toArray()[0].getClass(), (int)dims[0]);
 			Iterator<T> keyItr = keySet.iterator();
 			Iterator<T> valItr = valSet.iterator();
 			int count = 0;
-//			Set entrySet = map.entrySet();
-//			Iterator<Map.Entry> itr = entrySet.iterator();
 			while (keyItr.hasNext()) {
-//				Map.Entry entry = itr.next();
-//				System.out.println(entry.getKey().getClass());
 				keys[count] = (T)keyItr.next();
 				vals[count] = (T)valItr.next();
 				count++;
 			}
-//			
-//			while (it.hasNext()) {
-//				keys[count] = it.next();
-//				vals[count] = (T) arrVal[count];
-//				count++;
-//			}
 			H5Datatype typeKey = new H5Datatype(datatypeKey);
 			H5Datatype typeValue = new H5Datatype(datatypeValue);
 			try {
@@ -460,17 +440,22 @@ public class ObjectOutputStream {
 				recursiveIterator = 0;
 				String name = "";
 				long[] dims = { -1 };
+//				long[] dims = null;
 				String localGroup = "";
-				Annotation anno = field.getAnnotation(SerializeFieldOptions.class);
-				SerializeFieldOptions fieldOptions = (SerializeFieldOptions) anno;
-				if (anno != null) {
+//				Annotation anno = field.getAnnotation(SerializeFieldOptions.class);
+//				SerializeFieldOptions fieldOptions = (SerializeFieldOptions) anno;
+				SerializeFieldOptions fieldOptions = field.getAnnotation(SerializeFieldOptions.class);
+//				Annotation[] annos = field.getAnnotations();
+				if (fieldOptions != null) {
+					System.out.println("annotation present");
 					name = fieldOptions.name();
 					localGroup = fieldOptions.path();
+					System.out.println(localGroup);
 					dims = fieldOptions.dimensions();
 				}
 				if (!Modifier.isTransient(field.getModifiers()) && !field.isAnnotationPresent(Ignore.class)) {
 					try {
-						if (name == "") {
+						if (name.equals("")) {
 							name = field.getName();
 						}
 						if (!localGroup.equals("")) {
@@ -540,14 +525,23 @@ public class ObjectOutputStream {
 	private void writeData(Datatype type, Object data, long[] dims, String name) {
 		try {
 			Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name, null,
-					type, dims, null, null, 0, null);
-			int dataset_id = dset.open();
-			dset.write(data);
-			dset.close(dataset_id);
+					type, dims, null, null, 0, null, data);
+//			int dataset_id = dset.open();
+//			dset.write(data);
+//			dset.close(dataset_id);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
+	
+//	public static int[] getDataDimensions(Object arr) {
+//		if (arr.getClass().isArray()) {
+//			return getDimensions(arr);
+//		} else {
+//			int[] primDims = {1};
+//			return primDims;
+//		}
+//	}
 
 	// Returns the dimensions of an n-dimensional array
 	private static int[] getDimensions(Object arr) {
@@ -664,7 +658,7 @@ public class ObjectOutputStream {
 		return maxLength;
 	}
 	
-	private Set<Integer> copySetCharToInt(Set<Character> set) {
+	private static Set<Integer> copySetCharToInt(Set<Character> set) {
 		ArrayList<Integer> list= new ArrayList<Integer>();
 		Iterator<Character> itr = set.iterator();
 		while (itr.hasNext()) {
@@ -684,7 +678,7 @@ public class ObjectOutputStream {
 		return newSet;
 	}
 	
-	private Set<Integer> copySetBoolToInt(Set<Boolean> set) {
+	private static Set<Integer> copySetBoolToInt(Set<Boolean> set) {
 		ArrayList<Integer> list= new ArrayList<Integer>();
 		Iterator<Boolean> itr = set.iterator();
 		while (itr.hasNext()) {
@@ -705,7 +699,7 @@ public class ObjectOutputStream {
 		return newSet;
 	}
 	
-	private List<Integer> copyListCharToInt(List<Character> list) {
+	private static List<Integer> copyListCharToInt(List<Character> list) {
 		ArrayList<Integer> tempList = new ArrayList<Integer>();
 		for (int i = 0; i < list.size(); i++) {
 			tempList.add((Integer)((int)((char)list.get(i))));
@@ -725,7 +719,7 @@ public class ObjectOutputStream {
 		return newList;
 	}
 
-	private List<Integer> copyListBoolToInt(List<Boolean> list) {
+	private static List<Integer> copyListBoolToInt(List<Boolean> list) {
 		ArrayList<Integer> tempList = new ArrayList<Integer>();
 		for (int i = 0; i < list.size(); i++) {
 			int element = ((boolean)list.get(i) ? (int)1:(int)0);

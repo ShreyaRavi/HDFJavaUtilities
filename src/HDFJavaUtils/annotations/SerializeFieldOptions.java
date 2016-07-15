@@ -9,12 +9,12 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 public @interface SerializeFieldOptions {
 	
-	String name() default "";
+	public String name() default "";
 	
-	String path() default "DEFAULT";
+	public String path() default "DEFAULT";
 	
-	long[] dimensions() default {1, 1};
+	public long[] dimensions() default {1};
 	
-	boolean ignore() default false;
+	public boolean ignore() default false;
 	
 }

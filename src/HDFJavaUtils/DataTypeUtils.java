@@ -53,34 +53,32 @@ public class DataTypeUtils {
 	 */
 	public static int getDataType(String type) {
 		if ((type.lastIndexOf("[I") == (type.length() - 2))
-				|| type.contains("Integer"))
+				|| type.contains("java.lang.Integer")) {
 			return HDF5Constants.H5T_NATIVE_INT;
-		else if ((type.lastIndexOf("[C") == (type.length() - 2))
-				|| type.contains("Char"))
+		} else if ((type.lastIndexOf("[C") == (type.length() - 2))
+				|| type.contains("java.lang.Character")) {
 			return HDF5Constants.H5T_NATIVE_CHAR;
-		else if ((type.lastIndexOf("[B") == (type.length() - 2))
-				|| type.contains("Byte"))
+		} else if ((type.lastIndexOf("[B") == (type.length() - 2))
+				|| type.contains("java.lang.Byte")) {
 			return HDF5Constants.H5T_NATIVE_INT8;
-		else if ((type.lastIndexOf("[S") == (type.length() - 2))
-				|| type.contains("Short"))
+		} else if ((type.lastIndexOf("[S") == (type.length() - 2))
+				|| type.contains("java.lang.Short")) {
 			return HDF5Constants.H5T_NATIVE_SHORT;
-		else if ((type.lastIndexOf("[D") == (type.length() - 2))
-				|| type.contains("Double"))
+		} else if ((type.lastIndexOf("[D") == (type.length() - 2))
+				|| type.contains("java.lang.Double")) {
 			return HDF5Constants.H5T_NATIVE_DOUBLE;
-		else if ((type.lastIndexOf("[J") == (type.length() - 2))
-				|| type.contains("Long"))
+		} else if ((type.lastIndexOf("[J") == (type.length() - 2))
+				|| type.contains("java.lang.Long")) {
 			return HDF5Constants.H5T_NATIVE_LONG;
-		else if ((type.lastIndexOf("[F") == (type.length() - 2))
-				|| type.contains("Float"))
+		} else if ((type.lastIndexOf("[F") == (type.length() - 2))
+				|| type.contains("java.lang.Float")) {
 			return HDF5Constants.H5T_NATIVE_FLOAT;
-		else if ((type.lastIndexOf("[B") == (type.length() - 2))
-				|| type.contains("Byte"))
-			return HDF5Constants.H5T_NATIVE_CHAR;
-		else if ((type.lastIndexOf("[Z") == (type.length() - 2))
-				|| type.contains("Boolean"))
+		} else if ((type.lastIndexOf("[Z") == (type.length() - 2))
+				|| type.contains("java.lang.Boolean")) {
 			return HDF5Constants.H5T_NATIVE_HBOOL;
-		else
+		} else {
 			return -1;
+		}
 	}
 
 	/**
@@ -111,7 +109,8 @@ public class DataTypeUtils {
 	 */
 	public static Class<?> getArrayType(Object obj) {
 		String type = obj.getClass().getName();
-		if (type.lastIndexOf("[I") == (type.length() - 2)) {
+		if ((type.lastIndexOf("[I") == (type.length() - 2))/* ||
+				(type.lastIndexOf("[Ljava.lang.Integer") == (type.length() - 19))*/) {
 			return int.class;
 		} else if (type.lastIndexOf("[C") == (type.length() - 2)) {
 			return char.class;

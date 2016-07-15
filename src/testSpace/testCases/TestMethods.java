@@ -2,6 +2,12 @@ package testSpace.testCases;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import ncsa.hdf.object.FileFormat;
 import ncsa.hdf.object.h5.H5File;
 
@@ -20,8 +26,8 @@ public class TestMethods {
 	@BeforeClass
 	public static void init() {
 		file = new H5File("testMethods.h5", FileFormat.CREATE);
-		out = new ObjectOutputStream(file);
-		in = new ObjectInputStream(file);
+		out = new ObjectOutputStream(file, "hello");
+		in = new ObjectInputStream(file, "hello");
 	}
 
 	@Test
@@ -80,6 +86,14 @@ public class TestMethods {
 		assertEquals("testString", in.readString("String"));
 	}
 	
+	@Test
+	public void testCharArray() {
+		String testString = "characterArray";
+		char[] charArrayTest = testString.toCharArray();
+		out.writeChar(charArrayTest, "CharArrTest");
+		assertArrayEquals(charArrayTest, in.readCharArray("CharArrTest"));
+	}
+	
 	@Ignore("cannot override an existing dataset by writing to one with the same name -- EXPECTED")
 	@Test
 	public void testOverwrite() {
@@ -93,6 +107,15 @@ public class TestMethods {
 	public void testTypeMix() {
 		out.writeInt((int)3, "Type");
 		assertEquals((double)3.0, in.readDouble("Type"), 0.0);
+	}
+	
+	@Test
+	public void testInteger() {
+		Integer intVal = new Integer(3);
+		Integer intVal2 = new Integer(1);
+		out.writeObject(intVal);
+		in.readObject(intVal2);
+		assertEquals(intVal, intVal2);
 	}
 
 }
