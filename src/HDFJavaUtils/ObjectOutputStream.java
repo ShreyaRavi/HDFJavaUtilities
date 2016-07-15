@@ -360,7 +360,6 @@ public class ObjectOutputStream {
 	private <T> void writeMap(Map map, String name, Field field) {
 		Set keySet = map.keySet();
 		List valSet = (List)new ArrayList(map.values());
-//		List valSet = (List)Collections.list(Collections.enumeration(map.values()));
 		long[] dims = { keySet.size() };
 		String[] split = field.getGenericType().toString().split(",");
 		int datatypeKey = DataTypeUtils.getDataType(split[0]);
@@ -534,15 +533,6 @@ public class ObjectOutputStream {
 		}
 	}
 	
-//	public static int[] getDataDimensions(Object arr) {
-//		if (arr.getClass().isArray()) {
-//			return getDimensions(arr);
-//		} else {
-//			int[] primDims = {1};
-//			return primDims;
-//		}
-//	}
-
 	// Returns the dimensions of an n-dimensional array
 	private static int[] getDimensions(Object arr) {
 		if (arr == null)
