@@ -32,7 +32,7 @@ public class DataTypeUtils {
 	 * @return An H5Datatype object that corresponds to the input data
 	 */
 	public static H5Datatype getType(String type) {
-		if (type.contains("java.lang.String")) {
+		if (type.equals("java.lang.String")) {
 			return new H5Datatype(Datatype.CLASS_STRING, 1024, -1, -1);
 		}
 		try {
@@ -95,6 +95,8 @@ public class DataTypeUtils {
 	 * @return An int that represents the HDF5Constant that represents the type
 	 *         of input data
 	 */
+	// need to edit this so a class that happens to contain the word Char or Integer
+	// won't be recognized by this and return the incorrect HDF5Constant
 	public static int getDataType(String type) {
 		if ((type.lastIndexOf("[I") == (type.length() - 2))
 				|| type.contains("Integer"))

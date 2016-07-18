@@ -42,6 +42,7 @@ import ncsa.hdf.object.h5.H5File;
  * program gives the user tools to de-serialize a class from a HDF5 file
  * 
  * @author Ben Bressette
+ * @author Shreya Ravi
  * @version 0.1
  */
 public class ObjectInputStream {

@@ -39,12 +39,14 @@ import ncsa.hdf.object.h5.H5ScalarDS;
  * The program gives the user tools to serialize a class to a HDF file
  * 
  * @author Ben Bressette
+ * @author Shreya Ravi
  * @version 0.1
  */
 public class ObjectOutputStream {
 
 	private H5File file;
 	private String defaultPath;
+	private int recursiveIterator;
 
 	/**
 	 * Constructor for the class, the user is required to input a H5File
@@ -679,23 +681,23 @@ public class ObjectOutputStream {
 	
 	private static Object copyArrayCharToInt(Object original) {
 		Object copy = Array.newInstance(int.class, getDimensions(original));
-		copyArrayCharToInt(original, copy);
+		copyArrayCharToIntHelper(original, copy);
 		return copy;
 	}
 	
 	private static Object copyArrayBoolToInt(Object original) {
 		Object copy = Array.newInstance(int.class, getDimensions(original));
-		copyArrayBoolToInt(original, copy);
+		copyArrayBoolToIntHelper(original, copy);
 		return copy;
 	}
 	
 	// Converts a Character Array to an int array
-	private static void copyArrayCharToInt(Object original, Object copy) {
+	private static void copyArrayCharToIntHelper(Object original, Object copy) {
 		int n = Array.getLength(original);
 		for (int i = 0; i < n; i++) {
 			Object e = Array.get(original, i);
 			if (e != null && e.getClass().isArray()) {
-				copyArrayCharToInt(e, Array.get(copy, i));
+				copyArrayCharToIntHelper(e, Array.get(copy, i));
 			} else {
 				int tmp = (int) Array.getInt(original, i);
 				Array.set(copy, i, tmp);
@@ -704,12 +706,12 @@ public class ObjectOutputStream {
 	}
 
 	// Converts a Boolean array to an int array
-	private static void copyArrayBoolToInt(Object original, Object copy) {
+	private static void copyArrayBoolToIntHelper(Object original, Object copy) {
 		int n = Array.getLength(original);
 		for (int i = 0; i < n; i++) {
 			Object e = Array.get(original, i);
 			if (e != null && e.getClass().isArray()) {
-				copyArrayBoolToInt(e, Array.get(copy, i));
+				copyArrayBoolToIntHelper(e, Array.get(copy, i));
 			} else {
 				int tmp = Array.getBoolean(original, i) ? 1 : 0;
 				Array.set(copy, i, tmp);
@@ -791,26 +793,26 @@ public class ObjectOutputStream {
 	}
 
 	private <T> Object flattenArray(Object original, int[] dims) {
+		recursiveIterator = 0;
 		int length = 1;
 		for (int d: dims) {
 			length *= d;
 		}
 		T[] flat = (T[]) Array.newInstance(getBaseClass(original), length);
-		flattenArrayRecursiveHelper(original, flat, dims.length, 0);
+		flattenArrayRecursiveHelper(original, flat, dims.length);
 		return flat;
 	}
 
-	private void flattenArrayRecursiveHelper(Object original, Object flattened, int count, int iterator) {
+	private void flattenArrayRecursiveHelper(Object original, Object flattened, int count) {
 		int n = Array.getLength(original);
 		for (int i = 0, max = count; i < n; i++, count = max) {
 			Object e = Array.get(original, i);
 			count--;
 			if (e != null && count > 0) {
-				flattenArrayRecursiveHelper(e, flattened, count, iterator);
-
+				flattenArrayRecursiveHelper(e, flattened, count);
 			} else {
-				Array.set(flattened, iterator, Array.get(original, i));
-				iterator++;
+				Array.set(flattened, recursiveIterator, Array.get(original, i));
+				recursiveIterator++;
 			}
 		}
 	}
