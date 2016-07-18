@@ -46,6 +46,18 @@ public class DataTypeUtils {
 		}
 	}
 	
+	public static H5Datatype getType(Class<?> type) {
+		if (type.equals(String.class)) {
+			return new H5Datatype(Datatype.CLASS_STRING, 1024, -1, -1);
+		}
+		int dataType = getDataType(type);
+		if (dataType == -1) {
+			return null;
+		} else {
+			return new H5Datatype(dataType);
+		}	
+	}
+	
 	/**
 	 * Gets the HDF5Constant that corresponds with the type of input data
 	 * 
@@ -126,7 +138,7 @@ public class DataTypeUtils {
 	}
 	
 	public static int getDataType(Object obj) {
-		String type = obj.getClass().getComponentType().toString();
+		String type = obj.getClass().toString();
 		return getDataType(type);
 	}
 
