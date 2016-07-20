@@ -30,12 +30,16 @@ public class testDataA implements HDF5Serializable{
 	public String stringTest;
 	public byte byteTest;
 	public boolean booleanTest;
+//	Uninitialized instance variables won't be read correctly
+//		NullPointerException will be thrown because field.get(obj) will return null
+//	public int[] intArr;
 	public Collection[] collectionArrayTest = new Collection[3];
 	public Object[] arrayObjectArrayTest = new Object[3];
 	public testDataB[][] objectArrayTest = new testDataB[2][2];
 	public boolean[][][] boolArrayTest = new boolean[4][2][3];
 	public char[][] charArrayTest = new char[2][3];
 	public int[][][][] multiArrTest = new int[4][3][2][2];
+	public int hi;
 	
 	public testDataA(int val) {
 		integerTest = val;
@@ -76,6 +80,11 @@ public class testDataA implements HDF5Serializable{
 		arrayObjectArrayTest[1] = multiArrTest;
 		arrayObjectArrayTest[2] = boolArrayTest;
 		advancedMapTest.put(collectionArrayTest, arrayObjectArrayTest);
+//		intArr = new int[3];
+//		intArr[0] = 7;
+//		intArr[1] = 1;
+//		intArr[2] = 1;
+		hi = 8;
 	}
 	
 	public testDataA() {

@@ -283,14 +283,26 @@ public class ObjectInputStream {
 	public void readObject(Object obj, String path) {
 		readObjectHelper(obj, path);
 	}
+	
+	private static Object copyArrayIntToChar(Object original, int[] intDims) {
+		Object copy = Array.newInstance(char.class, intDims);
+		copyArrayIntToCharHelper(original, copy);
+		return copy;
+	}
+	
+	private static Object copyArrayIntToBool(Object original, int[] intDims) {
+		Object copy = Array.newInstance(boolean.class, intDims);
+		copyArrayIntToBoolHelper(original, copy);
+		return copy;
+	}
 
 	// Converts an Int array to a char array
-	private static void copyArrayIntToChar(Object original, Object copy) {
+	private static void copyArrayIntToCharHelper(Object original, Object copy) {
 		int n = Array.getLength(original);
 		for (int i = 0; i < n; i++) {
 			Object e = Array.get(original, i);
 			if (e != null && e.getClass().isArray()) {
-				copyArrayIntToChar(e, Array.get(copy, i));
+				copyArrayIntToCharHelper(e, Array.get(copy, i));
 			} else {
 				char tmp = (char) Array.getInt(original, i);
 				Array.set(copy, i, tmp);
@@ -299,12 +311,12 @@ public class ObjectInputStream {
 	}
 
 	// Converts an Int Array to a boolean array
-	private static void copyArrayIntToBool(Object original, Object copy) {
+	private static void copyArrayIntToBoolHelper(Object original, Object copy) {
 		int n = Array.getLength(original);
 		for (int i = 0; i < n; i++) {
 			Object e = Array.get(original, i);
 			if (e != null && e.getClass().isArray()) {
-				copyArrayIntToBool(e, Array.get(copy, i));
+				copyArrayIntToBoolHelper(e, Array.get(copy, i));
 			} else {
 				boolean tmp = Array.getInt(original, i) == 1 ? true : false;
 				Array.set(copy, i, tmp);
@@ -423,7 +435,6 @@ public class ObjectInputStream {
 			try {
 				Dataset dset = (Dataset) file.get(name);
 				int dset_id = dset.open();
-				Object arr;
 				Object data;
 
 				dset.getMetadata();
@@ -434,24 +445,22 @@ public class ObjectInputStream {
 				}
 				if (datatype == char.class) {
 					data = Array.newInstance(int.class, intDims);
-					arr = Array.newInstance(datatype, intDims);
 					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
 							HDF5Constants.H5P_DEFAULT, data);
-					copyArrayIntToChar(data, arr);
+					data = copyArrayIntToChar(data, intDims);
 				} else if (datatype == boolean.class) {
 					data = Array.newInstance(int.class, intDims);
-					arr = Array.newInstance(datatype, intDims);
 					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
 							HDF5Constants.H5P_DEFAULT, data);
-					copyArrayIntToBool(data, arr);
+					data = copyArrayIntToBool(data, intDims);
 				} else {
-					arr = Array.newInstance(datatype, intDims);
+					data = Array.newInstance(datatype, intDims);
 					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
-							HDF5Constants.H5P_DEFAULT, arr);
+							HDF5Constants.H5P_DEFAULT, data);
 				}
 
 				dset.close(dset_id);
-				return arr;
+				return data;
 			} catch (Exception e) {
 				e.printStackTrace();
 				return null;

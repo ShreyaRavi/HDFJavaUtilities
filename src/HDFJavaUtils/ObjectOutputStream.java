@@ -741,8 +741,7 @@ public class ObjectOutputStream {
 		for (String str : groupPath) {
 			try {
 				Group grp = file.createGroup(base + str, null);
-				int test = H5.H5Gopen(file.getFID(), base + str, HDF5Constants.H5P_DEFAULT);
-
+//				int test = H5.H5Gopen(file.getFID(), base + str, HDF5Constants.H5P_DEFAULT);
 				base += str + "/";
 			} catch (Exception e) {
 				// e.printStackTrace();
@@ -768,7 +767,7 @@ public class ObjectOutputStream {
 		} 
 	}
 	
-	private int[] longToIntArr(long[] longArr) {
+	private static int[] longToIntArr(long[] longArr) {
 		int[] intArr = new int[longArr.length];
 		for (int i = 0; i < longArr.length; i++) {
 			intArr[i] = (int) longArr[i];
@@ -776,7 +775,7 @@ public class ObjectOutputStream {
 		return intArr;
 	}
 	
-	private long[] intToLongArr(int[] intArr) {
+	private static long[] intToLongArr(int[] intArr) {
 		long[] longArr = new long[intArr.length];
 		for (int i = 0; i < intArr.length; i++) {
 			longArr[i] = (long) intArr[i];
@@ -784,7 +783,7 @@ public class ObjectOutputStream {
 		return longArr;
 	}
 	
-	private int[] arrListToIntArr(ArrayList<Integer> arrList) {
+	private static int[] arrListToIntArr(ArrayList<Integer> arrList) {
 		int[] intArr = new int[arrList.size()];
 		for (int i = 0; i < intArr.length; i++) {
 			intArr[i] = arrList.get(i);

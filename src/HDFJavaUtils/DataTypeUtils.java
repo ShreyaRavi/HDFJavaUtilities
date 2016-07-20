@@ -5,6 +5,16 @@ import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.object.Datatype;
 import ncsa.hdf.object.h5.H5Datatype;
 
+/**
+ * DataTypeUtils is a utility class that determines the corresponding
+ * H5Datatype objects, HDF5Constants, or Class objects of data
+ * 
+ * @author Shreya Ravi
+ * @author Ben Bressette
+ * 
+ * @version 0.1
+ *
+ */
 public class DataTypeUtils {
 
 	/**
@@ -173,5 +183,5 @@ public class DataTypeUtils {
 		}
 		return null;
 	}
-
+	
 }
