@@ -349,7 +349,7 @@ public class DatasetUtils {
 	private static long[] intToLongArr(int[] intArr) {
 		long[] longArr = new long[intArr.length];
 		for (int i = 0; i < intArr.length; i++) {
-			longArr[i] = (long) intArr[i];
+			longArr[i] = Long.valueOf(intArr[i]).intValue();
 		}
 		return longArr;
 	}

@@ -438,11 +438,9 @@ public class ObjectInputStream {
 				Object data;
 
 				dset.getMetadata();
-				long[] dimensions = dset.getDims();
-				int[] intDims = new int[dimensions.length];
-				for (int i = 0; i < dimensions.length; i++) {
-					intDims[i] = Long.valueOf(dimensions[i]).intValue();
-				}
+				int[] intDims = longToIntArr(dset.getDims());
+//				long[] dimensions = intToLongArr(getAttributeDims(getObjectAttributes(name)));
+				
 				if (datatype == char.class) {
 					data = Array.newInstance(int.class, intDims);
 					H5.H5Dread(dset_id, HDF5Constants.H5T_NATIVE_INT, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
@@ -573,6 +571,21 @@ public class ObjectInputStream {
 
 		}
 		return map;
+	}
+	
+	private static long[] intToLongArr(int[] intArr) {
+		long[] longArr = new long[intArr.length];
+		for (int i = 0; i < intArr.length; i++) {
+			longArr[i] = intArr[i];
+		}
+		return longArr;
+	}
+	private static int[] longToIntArr(long[] longArr) {
+		int[] intArr = new int[longArr.length];
+		for (int i = 0; i < longArr.length; i++) {
+			intArr[i] = Long.valueOf(longArr[i]).intValue();
+		}
+		return intArr;
 	}
 
 	private List<Attribute> getObjectAttributes(String name) {
