@@ -70,7 +70,6 @@ public class DatasetUtils {
 		}
 	}
 	
-	/*
 	public void writeExtendibleDS(String fileName, String name, Object obj) {
 		long[] chunkDims = {1,1};
 		int gzip = 0;
@@ -170,7 +169,6 @@ public class DatasetUtils {
 			return null;
 		}		
 	}
-	*/
 
 	private void selectSubset(int dspaceID, long[] start, long[] stride, long[] count, long[] block, SubsetSelect subsetSelect) {
 		int selectType = 0;
