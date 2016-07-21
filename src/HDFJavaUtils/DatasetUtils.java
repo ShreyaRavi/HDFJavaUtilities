@@ -2,6 +2,9 @@ package HDFJavaUtils;
 
 import java.lang.reflect.Array;
 
+import HDFJavaUtils.constants.DatasetConstants;
+import HDFJavaUtils.interfaces.DatasetOptions;
+
 import ncsa.hdf.hdf5lib.H5;
 import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.object.h5.H5Datatype;
