@@ -51,9 +51,9 @@ public class ObjectInputStream {
 	private String defaultPath;
 	private int recursionIterator;
 	private static final Set<Class<?>> WRAPPER_TYPE = new HashSet<Class<?>>(Arrays.asList(new Class<?>[] {
-			Boolean.class, Character.class, Integer.class, Short.class, Long.class, Float.class, Double.class }));
+			Boolean.class, Character.class, Integer.class, Short.class, Long.class, Float.class, Double.class, Byte.class }));
 	private static final Set<Class<?>> PRIMITIVE_TYPE = new HashSet<Class<?>>(Arrays.asList(new Class<?>[] {
-			boolean.class, char.class, int.class, short.class, long.class, float.class, double.class }));
+			boolean.class, char.class, int.class, short.class, long.class, float.class, double.class, byte.class }));
 
 	/**
 	 * Constructor for the class, the user is required to input a H5File
