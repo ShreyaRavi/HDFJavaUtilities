@@ -4,112 +4,155 @@ import java.lang.reflect.Array;
 
 import ncsa.hdf.hdf5lib.H5;
 import ncsa.hdf.hdf5lib.HDF5Constants;
-import ncsa.hdf.object.FileFormat;
 import ncsa.hdf.object.h5.H5Datatype;
 import ncsa.hdf.object.h5.H5File;
 import ncsa.hdf.object.h5.H5ScalarDS;
 
 public class DatasetUtils {
 	
-	public void createFixedDS(String fileName, String name, long[] dims, H5Datatype type) {
+	/*
+	public H5ScalarDs createFixedDS(String fileName, String name, long[] dims, H5Datatype type) {
 		try {
-			H5File file = new H5File(fileName, FileFormat.WRITE);
+			H5File file = new H5File(fileName, H5File.WRITE);
 			file.open();
-			file.createScalarDS("/" + name, null, type, dims, null, null, 0, null, null);
+			return file.createScalarDS("/" + name, null, type, dims, null, null, 0, null, null);
 		} catch (Exception e) {
-			
+			e.printStackTrace();
+			return null;
 		}
 	}
 	
-	public void createExtendibleDS(String fileName, String name, H5Datatype type, 
+	public H5ScalarDS createExtendibleDS(String fileName, String name, H5Datatype type, 
 			long[] dims) {
 		long[] chunkDims = null;
-		createExtendibleDS(fileName, name, type, dims, chunkDims);
+		return createExtendibleDS(fileName, name, type, dims, chunkDims);
 	}
 	
-	public void createExtendibleDS(String fileName, String name, H5Datatype type, 
+	public H5ScalarDS createExtendibleDS(String fileName, String name, H5Datatype type, 
 			long[] dims, long[] chunkDims, int gzip) {
 		boolean[] extendibleDims = getExtendibleDims(dims);
-		createExtendibleDS(fileName, name, type, dims, extendibleDims, chunkDims, gzip);
+		return createExtendibleDS(fileName, name, type, dims, extendibleDims, chunkDims, gzip);
 	}
 	
-	public void createExtendibleDS(String fileName, String name, H5Datatype type, 
+	public H5ScalarDS createExtendibleDS(String fileName, String name, H5Datatype type, 
 			long[] dims, long[] chunkDims) {
 		int gzip = 0;
-		createExtendibleDS(fileName, name, type, dims, chunkDims, gzip);
+		return createExtendibleDS(fileName, name, type, dims, chunkDims, gzip);
 	}
 	
-	public void createExtendibleDS(String fileName, String name, H5Datatype type, 
+	public H5ScalarDS createExtendibleDS(String fileName, String name, H5Datatype type, 
 			long[] dims, boolean[] extendibleDims) {
 		long[] chunkDims = null;
-		createExtendibleDS(fileName, name, type, dims, extendibleDims, chunkDims);
+		return createExtendibleDS(fileName, name, type, dims, extendibleDims, chunkDims);
 	}
 	
-	public void createExtendibleDS(String fileName, String name, H5Datatype type, 
+	public H5ScalarDS createExtendibleDS(String fileName, String name, H5Datatype type, 
 			long[] dims, boolean[] extendibleDims, long[] chunkDims) {
 		int gzip = 0;
-		createExtendibleDS(fileName, name, type, dims, extendibleDims, chunkDims, gzip);
+		return createExtendibleDS(fileName, name, type, dims, extendibleDims, chunkDims, gzip);
 	}
 	
-	public void createExtendibleDS(String fileName, String name, H5Datatype type,
+	public H5ScalarDS createExtendibleDS(String fileName, String name, H5Datatype type,
 			long[] dims, boolean[] extendibleDims, long[] chunkDims, int gzip) {
 		Object fill = null;
-		createExtendibleDS(fileName, name, type, dims, extendibleDims, chunkDims, gzip, fill);
+		return createExtendibleDS(fileName, name, type, dims, extendibleDims, chunkDims, gzip, fill);
 	}
 	
-	public void createExtendibleDS(String fileName, String name, H5Datatype type,
+	public H5ScalarDS createExtendibleDS(String fileName, String name, H5Datatype type,
 			long[] dims, boolean[] extendibleDims, long[] chunkDims, int gzip, Object fill) {
 		try {
-			H5File file = new H5File(fileName, FileFormat.WRITE);
-			file.open();
+			H5File file = new H5File(fileName, H5File.WRITE);
 			long[] maxDims = intToLongArr(getMaxDims(dims, extendibleDims));
-			file.createScalarDS("/" + name, null, type, dims, maxDims, chunkDims, gzip, fill, null);
-			file.close();
+			return file.createScalarDS("/" + name, null, type, dims, maxDims, chunkDims, gzip, fill, null);
 		} catch (Exception e) {
-			
+			e.printStackTrace();
+			return null;
 		}
 	}
+	*/
 	
-	public void writeExtendibleDS(String fileName, String name, Object obj) {
-		long[] chunkDims = {1,1};
-		int gzip = 0;
-		long[] dims = intToLongArr(getDimensions(obj));
-		writeExtendibleDS(fileName, name, obj, dims, chunkDims, gzip);
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data) {
+		long[] chunkDims = null;
+		writeExtendibleDS(fileName, name, dims, data, chunkDims);
 	}
 	
-	public void writeExtendibleDS(String fileName, String name, Object obj, long[] dims) {
-		long[] chunkDims = {1,1};
-		int gzip = 0;
-		writeExtendibleDS(fileName, name, obj, dims, chunkDims, gzip);
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data,
+			long[] chunkDims) {
+		writeExtendibleDS(fileName, name, dims, data, chunkDims, 0);
 	}
 	
-	public void writeExtendibleDS(String fileName, String name, Object obj, long[] dims, long[] chunkDims) {
-		int gzip = 0;
-		writeExtendibleDS(fileName, name, obj, dims, chunkDims, gzip);
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data,
+			long[] chunkDims, int gzip) {
+		
 	}
-
-	public void writeExtendibleDS(String fileName, String name, Object obj, long[] dims, long[] chunkDims, int gzip) {
-		H5File file = new H5File(fileName, FileFormat.CREATE);
-		long[] maxDims = intToLongArr(getMaxDims(dims, getExtendibleDims(dims)));
-		int typeID = DataTypeUtils.getDataType(obj);
+	
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data,
+			boolean[] extendibleDims) {
+		long[] chunkDims = null;
+		writeExtendibleDS(fileName, name, dims, data, extendibleDims, chunkDims);
+	}
+	
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data,
+			boolean[] extendibleDims, long[] chunkDims) {
+		writeExtendibleDS(fileName, name, dims, data, extendibleDims, chunkDims, 0);
+	}
+	
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data,
+			boolean[] extendibleDims, long[] chunkDims, int gzip) {
+		writeExtendibleDS(fileName, name, dims, data, extendibleDims, chunkDims, gzip, null);
+	}
+	
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data,
+			boolean[] extendibleDims, long[] chunkDims, Object fill) {
+		writeExtendibleDS(fileName, name, dims, data, extendibleDims, chunkDims, 0, fill);
+	}
+	
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data,
+			boolean[] extendibleDims, Object fill) {
+		long[] chunkDims = null;
+		writeExtendibleDS(fileName, name, dims, data, extendibleDims, chunkDims, fill);		
+	}
+	
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data,
+			Object fill) {
+		long[] chunkDims = null;
+		writeExtendibleDS(fileName, name, dims, data, chunkDims, fill);
+	}
+	
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data,
+			long[] chunkDims, Object fill) {
+		writeExtendibleDS(fileName, name, dims, data, chunkDims, 0, fill);
+	}
+	
+	public void writeExtendibleDS(String fileName, String name, long[] dims, Object data,
+			long[] chunkDims, int gzip, Object fill) {
+		boolean[] extendibleDims = getExtendibleDims(dims);
+		writeExtendibleDS(fileName, name, dims, data, extendibleDims, chunkDims, gzip, fill);		
+	}
+	
+	public void writeExtendibleDS(String fileName, String name,	long[] dims, Object data,
+			boolean[] extendibleDims, long[] chunkDims, int gzip, Object fill) {
+		H5File file = new H5File(fileName, H5File.WRITE);
+		long[] maxDims = intToLongArr(getMaxDims(dims, extendibleDims));
+		int typeID = DataTypeUtils.getDataType(data);
 		if (typeID == HDF5Constants.H5T_NATIVE_CHAR) {
-			obj = copyArrayCharToInt(obj);
+			data = copyArrayCharToInt(data);
 			typeID = HDF5Constants.H5T_NATIVE_INT;
 		} else if (typeID == HDF5Constants.H5T_NATIVE_HBOOL) {
-			obj = copyArrayBoolToInt(obj);
+			data = copyArrayBoolToInt(data);
 			typeID = HDF5Constants.H5T_NATIVE_INT;
 		}
 		final H5Datatype type = new H5Datatype(typeID);
 		try {
-			file.createScalarDS("/" + name, null, type, dims, maxDims, chunkDims, gzip, null, obj);
+			file.createScalarDS("/" + name, null, type, dims, maxDims, chunkDims, gzip, fill, data);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 	}
-  
+	
+	
 	public void extendExtendibleDS(String fileName, String name, Object obj) {
-		H5File file = new H5File(fileName, FileFormat.WRITE);
+		H5File file = new H5File(fileName, H5File.WRITE);
 		long[] extDims = intToLongArr(getDimensions(obj));
 		try {
 			int typeID = DataTypeUtils.getDataType(obj);
@@ -138,7 +181,7 @@ public class DatasetUtils {
 	}
   
 	public Object readExtendibleDataset(String fileName, String name, Object obj) {
-		H5File file = new H5File(fileName, FileFormat.READ);
+		H5File file = new H5File(fileName, H5File.READ);
 		Class<?> datatype = DataTypeUtils.getArrayType(obj);
 		int HDF5Datatype = DataTypeUtils.getDataType(datatype);
 		try {
@@ -202,7 +245,7 @@ public class DatasetUtils {
 	public void writeHyperslab(String fileName, String name, Object obj, long[] dims, 
 			long[] start, long[] stride, long[] count, long[] block) {
 		try {
-			H5File file = new H5File(fileName, FileFormat.WRITE);
+			H5File file = new H5File(fileName, H5File.WRITE);
 			file.open();
 			int typeID = DataTypeUtils.getDataType(obj);
 			H5ScalarDS dset = (H5ScalarDS) file.get(name);
@@ -221,7 +264,7 @@ public class DatasetUtils {
 			long[] start, long[] stride, long[] count, long[] block) {
 		
 		try {
-			H5File file = new H5File(fileName, FileFormat.READ);
+			H5File file = new H5File(fileName, H5File.READ);
 			file.open();
 			int typeID = DataTypeUtils.getDataType(obj);
 			H5ScalarDS dset = (H5ScalarDS) file.get(name);
