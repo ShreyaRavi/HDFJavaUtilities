@@ -58,7 +58,7 @@ public class DataTypeUtils {
 		if (type.equals(int.class) || type.equals(Integer.class))
 			return HDF5Constants.H5T_NATIVE_INT;
 		else if (type.equals(char.class)|| type.equals(Character.class))
-			return HDF5Constants.H5T_NATIVE_CHAR;
+			return HDF5Constants.H5T_NATIVE_INT;
 		else if (type.equals(byte.class)|| type.equals(Byte.class))
 			return HDF5Constants.H5T_NATIVE_INT8;
 		else if (type.equals(short.class)|| type.equals(Short.class))

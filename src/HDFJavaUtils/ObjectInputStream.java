@@ -50,9 +50,9 @@ public class ObjectInputStream {
 	private String defaultPath;
 	private int recursionIterator;
 	private static final Set<Class<?>> WRAPPER_TYPE = new HashSet<Class<?>>(Arrays.asList(new Class<?>[] {
-			Boolean.class, Character.class, Integer.class, Short.class, Long.class, Float.class, Double.class }));
+			Boolean.class, Character.class, Integer.class, Short.class, Long.class, Float.class, Double.class, Byte.class}));
 	private static final Set<Class<?>> PRIMITIVE_TYPE = new HashSet<Class<?>>(Arrays.asList(new Class<?>[] {
-			boolean.class, char.class, int.class, short.class, long.class, float.class, double.class }));
+			boolean.class, char.class, int.class, short.class, long.class, float.class, double.class, byte.class}));
 
 	/**
 	 * Constructor for the class, the user is required to input a H5File
@@ -376,7 +376,9 @@ public class ObjectInputStream {
 	private List<Character> copyListIntToChar(List<Integer> list) {
 		ArrayList<Character> tempList = new ArrayList<Character>();
 		for (int i = 0; i < list.size(); i++) {
-			tempList.add((Character) ((char) ((int) list.get(i))));
+			int tmpInt = list.get(i);
+			char tmp = (char) tmpInt;
+			tempList.add(tmp);
 		}
 		String type = list.getClass().toString();
 		List<Character> newList = null;
@@ -418,6 +420,9 @@ public class ObjectInputStream {
 	private <T> Object readArray(String name, int HDF5Datatype, Object obj) {
 		recursionIterator = 0;
 		Class<?> datatype = DataTypeUtils.getArrayType(obj);
+		int HDF5Datatype1 = -1;
+		if (datatype != null)
+			HDF5Datatype1 = DataTypeUtils.getDataType(datatype);
 		if (datatype != null) {
 			try {
 				Dataset dset = (Dataset) file.get(name);
@@ -464,27 +469,25 @@ public class ObjectInputStream {
 				for (int i : dims)
 					length *= i;
 				Class<?> cl = getBaseClass(obj);
-				System.out.println(Arrays.toString(dims) + length);
 				Object objectArray = Array.newInstance(cl, dims);
 				T[] flatArray = (T[]) Array.newInstance(cl, length);
-				for (int i = 0, j = 0; i <= info[info.length-1]; i++) {
+				for (int i = 0, j = 0; i <= info[info.length - 1]; i++) {
 					if (info[j] == i) {
 						attr = getObjectAttributes(name + "/" + info[j]);
 						String objClass = getAttributeClass(attr);
 						cl = Class.forName(objClass);
 						if (cl.isArray()) {
-							System.out.println(cl);
 							Object arr = Array.newInstance(cl, getAttributeDims(attr));
 							Array.set(flatArray, info[j],
 									readArray(name + "/" + info[j], DataTypeUtils.getDataType(getBaseClass(arr)), arr));
 						} else if (Collection.class.isAssignableFrom(cl)) {
 							if (List.class.isAssignableFrom(cl)) {
-
+								Array.set(flatArray, info[j], readList((List) cl.newInstance(), name + "/" + info[j]));
 							} else if (Set.class.isAssignableFrom(cl)) {
-
+								Array.set(flatArray, info[j], readSet((Set) cl.newInstance(), name + "/" + info[j]));
 							}
 						} else if (Map.class.isAssignableFrom(cl)) {
-
+							Array.set(flatArray, info[j], readMap((Map) cl.newInstance(), name + "/" + info[j]));
 						} else {
 							Array.set(flatArray, info[j], cl.newInstance());
 							readObjectHelper(flatArray[info[j]], name + "/" + info[j]);
@@ -504,14 +507,21 @@ public class ObjectInputStream {
 
 	}
 
-	private List readList(List list, String name, Field field) {
-		// Type compType = field.getGenericType();
-		ParameterizedType type = (ParameterizedType) field.getGenericType();
-		Class<?> cl = (Class<?>) type.getActualTypeArguments()[0];
-		if (WRAPPER_TYPE.contains(cl)) {
+	private <T> List readList(List list, String name) {
+		List<Attribute> attr = getObjectAttributes(name);
+		String compClass = getAttributeComponentClass(attr);
+		Class<?> cl = null;
+		try {
+			cl = Class.forName(compClass);
+		} catch (ClassNotFoundException | NullPointerException e1) {
+
+		}
+		if (WRAPPER_TYPE.contains(cl) || PRIMITIVE_TYPE.contains(cl)) {
 			Object arr = read(name);
 			try {
 				int count = 0;
+				System.out.println(cl);
+				
 				while (true) {
 					list.add(Array.get(arr, count));
 					count++;
@@ -519,40 +529,222 @@ public class ObjectInputStream {
 			} catch (IndexOutOfBoundsException e) {
 
 			}
+			if(cl == Character.class)
+				list = copyListIntToChar(list);
+			if(cl == Boolean.class) 
+				list = copyListIntToBool(list);
 			return list;
-		} else if (cl.isArray()) {
-			List<Attribute> attr = getObjectAttributes(name);
-			int[] info = (int[]) attr.get(0).getValue();
-			for (int i = 0, c = 0; i <= info[info.length - 1]; i++) {
-				if (i == info[c]) {
-					list.add(readArray(name + "/" + info[c], DataTypeUtils.getDataType(cl.getComponentType()),
-							Array.newInstance(cl.getComponentType(), 1)));
-					c++;
-				} else {
-					list.add(null);
+		} else {
+			try {
+				int info[] = getAttributeLocations(attr);
+				for (int i = 0, j = 0; i <= info[info.length - 1]; i++) {
+					if (info[j] == i) {
+						attr = getObjectAttributes(name + "/" + info[j]);
+						String objClass = getAttributeClass(attr);
+						cl = Class.forName(objClass);
+						if (cl.isArray()) {
+							Object arr = Array.newInstance(cl, getAttributeDims(attr));
+							list.add(
+									readArray(name + "/" + info[j], DataTypeUtils.getDataType(getBaseClass(arr)), arr));
+						} else if (Collection.class.isAssignableFrom(cl)) {
+							if (List.class.isAssignableFrom(cl)) {
+								list.add(readList((List) cl.newInstance(), name + "/" + info[j]));
+							} else if (Set.class.isAssignableFrom(cl)) {
+								list.add(readSet((Set) cl.newInstance(), name + "/" + info[j]));
+							}
+						} else if (Map.class.isAssignableFrom(cl)) {
+							list.add(readMap((Map) cl.newInstance(), name + "/" + info[j]));
+						} else {
+							Object obj = cl.newInstance();
+							readObjectHelper(obj, name + "/" + info[j]);
+							list.add(obj);
+						}
+						j++;
+					} else {
+						list.add(null);
+					}
 				}
+				return list;
+			} catch (Exception e) {
+				e.printStackTrace();
+				return null;
 			}
 		}
-		return list;
 	}
 
 	private Set readSet(Set set, String name) {
-		Object arr = read(name);
+		List<Attribute> attr = getObjectAttributes(name);
+		String compClass = getAttributeComponentClass(attr);
+		Class<?> cl = null;
 		try {
-			int count = 0;
-			while (true) {
-				set.add(Array.get(arr, count));
-				count++;
-			}
-		} catch (IndexOutOfBoundsException e) {
-
+			cl = Class.forName(compClass);
+		} catch (ClassNotFoundException e1) {
+			e1.printStackTrace();
 		}
-		return set;
+		if (WRAPPER_TYPE.contains(cl)) {
+			Object arr = read(name);
+			try {
+				int count = 0;
+				while (true) {
+					set.add(Array.get(arr, count));
+					count++;
+				}
+			} catch (IndexOutOfBoundsException e) {
+
+			}
+			if(cl == Character.class)
+				set = copySetIntToChar(set);
+			if(cl == Boolean.class) 
+				set = copySetIntToBool(set);
+			return set;
+		} else {
+			try {
+				int info[] = getAttributeLocations(attr);
+				for (int i = 0, j = 0; i <= info[info.length - 1]; i++) {
+					if (info[j] == i) {
+						attr = getObjectAttributes(name + "/" + info[j]);
+						String objClass = getAttributeClass(attr);
+						cl = Class.forName(objClass);
+						if (cl.isArray()) {
+							Object arr = Array.newInstance(cl, getAttributeDims(attr));
+							set.add(readArray(name + "/" + info[j], DataTypeUtils.getDataType(getBaseClass(arr)), arr));
+						} else if (Collection.class.isAssignableFrom(cl)) {
+							if (List.class.isAssignableFrom(cl)) {
+								set.add(readList((List) cl.newInstance(), name + "/" + info[j]));
+							} else if (Set.class.isAssignableFrom(cl)) {
+								set.add(readSet((Set) cl.newInstance(), name + "/" + info[j]));
+							}
+						} else if (Map.class.isAssignableFrom(cl)) {
+							set.add(readMap((Map) cl.newInstance(), name + "/" + info[j]));
+						} else {
+							Object obj = cl.newInstance();
+							readObjectHelper(obj, name + "/" + info[j]);
+							set.add(obj);
+						}
+						j++;
+					} else {
+						set.add(null);
+					}
+				}
+				return set;
+			} catch (Exception e) {
+				e.printStackTrace();
+				return null;
+			}
+		}
 	}
 
 	private Map readMap(Map map, String name) {
-		Object arrKeys = read(name + "/keys");
-		Object arrVals = read(name + "/values");
+		List<Attribute> valAttr = getObjectAttributes(name + "/values");
+		String valClassName = getAttributeClass(valAttr);
+		Class<?> valClass = null;
+		try {
+			valClass = valClass.forName(valClassName);
+		} catch (ClassNotFoundException e1) {
+			e1.printStackTrace();
+		}
+		List<Attribute> keyAttr = getObjectAttributes(name + "/keys");
+		String keyClassName = getAttributeClass(keyAttr);
+		Class<?> keyClass = null;
+		try {
+			keyClass = keyClass.forName(keyClassName);
+		} catch (ClassNotFoundException e1) {
+			e1.printStackTrace();
+		}
+		Object arrKeys = null;
+		Object arrVals = null;
+		if (WRAPPER_TYPE.contains(keyClass)) {
+			arrKeys = read(name + "/keys");
+			if(keyClass == Character.class) {
+				Object tmp = Array.newInstance(Character.class, Array.getLength(arrKeys));
+				copyArrayIntToChar(arrKeys, tmp);
+				arrKeys = tmp;
+			}
+			if(keyClass == Boolean.class) {
+				Object tmp = Array.newInstance(Boolean.class, Array.getLength(arrKeys));
+				copyArrayIntToBool(arrKeys, tmp);
+				arrKeys = tmp;
+			}
+		} else {
+			int[] info = getAttributeLocations(keyAttr);
+			arrKeys = Array.newInstance(keyClass, info[info.length - 1] + 1);
+			for (int i = 0, j = 0; i <= info[info.length - 1]; i++) {
+				if (info[j] == i) {
+					try {
+						keyAttr = getObjectAttributes(name + "/keys/" + info[j]);
+						String objClass = getAttributeClass(keyAttr);
+						keyClass = Class.forName(objClass);
+						if (keyClass.isArray()) {
+							Object arr = Array.newInstance(keyClass, getAttributeDims(keyAttr));
+							Array.set(arrKeys, i,
+									readArray(name + "/keys/" + info[j], DataTypeUtils.getDataType(getBaseClass(arr)), arr));
+						} else if (Collection.class.isAssignableFrom(keyClass)) {
+							if (List.class.isAssignableFrom(keyClass)) {
+								Array.set(arrKeys, i, readList((List) keyClass.newInstance(), name + "/keys/" + info[j]));
+							} else if (Set.class.isAssignableFrom(keyClass)) {
+								Array.set(arrKeys, i, readSet((Set) keyClass.newInstance(), name + "/keys/" + info[j]));
+							}
+						} else if (Map.class.isAssignableFrom(keyClass)) {
+							Array.set(arrKeys, i, readMap((Map) keyClass.newInstance(), name + "/keys/" + info[j]));
+						} else {
+							Object obj = keyClass.newInstance();
+							readObjectHelper(obj, name + "/keys/" + info[j]);
+							Array.set(arrKeys, i, obj);
+						}
+					} catch (IllegalArgumentException | InstantiationException | IllegalAccessException
+							| ClassNotFoundException e) {
+
+					}
+					j++;
+				}
+			}
+		}
+		if (WRAPPER_TYPE.contains(valClass)) {
+			arrVals = read(name + "/values");
+			if(valClass == Character.class) {
+				Object tmp = Array.newInstance(Character.class, Array.getLength(arrKeys));
+				copyArrayIntToChar(arrVals, tmp);
+				arrKeys = tmp;
+			}
+			if(valClass == Boolean.class) {
+				Object tmp = Array.newInstance(Boolean.class, Array.getLength(arrKeys));
+				copyArrayIntToBool(arrVals, tmp);
+				arrKeys = tmp;
+			}
+		} else {
+			int[] info = getAttributeLocations(valAttr);
+			arrVals = Array.newInstance(valClass, info[info.length - 1] + 1);
+			for (int i = 0, j = 0; i <= info[info.length - 1]; i++) {
+				if (info[j] == i) {
+					try {
+						valAttr = getObjectAttributes(name + "/values/" + info[j]);
+						String objClass = getAttributeClass(valAttr);
+						valClass = Class.forName(objClass);
+						if (valClass.isArray()) {
+							Object arr = Array.newInstance(valClass, getAttributeDims(valAttr));
+							Array.set(arrVals, i,
+									readArray(name + "/values/" + info[j], DataTypeUtils.getDataType(getBaseClass(arr)), arr));
+						} else if (Collection.class.isAssignableFrom(valClass)) {
+							if (List.class.isAssignableFrom(valClass)) {
+								Array.set(arrVals, i, readList((List) valClass.newInstance(), name + "/values/" + info[j]));
+							} else if (Set.class.isAssignableFrom(valClass)) {
+								Array.set(arrVals, i, readSet((Set) valClass.newInstance(), name + "/values/" + info[j]));
+							}
+						} else if (Map.class.isAssignableFrom(valClass)) {
+							Array.set(arrVals, i, readMap((Map) valClass.newInstance(), name + "/values/" + info[j]));
+						} else {
+							Object obj = valClass.newInstance();
+							readObjectHelper(obj, name + "/values/" + info[j]);
+							Array.set(arrVals, i, obj);
+						}
+					} catch (IllegalArgumentException | InstantiationException | IllegalAccessException
+							| ClassNotFoundException e) {
+
+					}
+					j++;
+				}
+			}
+		}
 		try {
 			int count = 0;
 			while (true) {
@@ -594,6 +786,20 @@ public class ObjectInputStream {
 		for (Attribute a : attr)
 			if (a.getName().equals("class"))
 				return (String) Array.get(a.getValue(), 0);
+		return null;
+	}
+
+	private String getAttributeComponentClass(List<Attribute> attr) {
+		for (Attribute a : attr)
+			if (a.getName().equals("componentClass"))
+				return (String) Array.get(a.getValue(), 0);
+		return null;
+	}
+
+	private Object getAttribute(List<Attribute> attr, String attrName) {
+		for (Attribute a : attr)
+			if (a.getName().equals(attrName))
+				return Array.get(a.getValue(), 0);
 		return null;
 	}
 
@@ -659,21 +865,32 @@ public class ObjectInputStream {
 						} else if (type.contains("[")) {
 							field.set(obj, readArray(name, DataTypeUtils.getDataType(field), field.get(obj)));
 						} else if (type.equals("class java.util.ArrayList")) {
-							field.set(obj, readList((ArrayList) field.get(obj), name, field));
+							ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+							Class<?> cl = (Class<?>) genericType.getActualTypeArguments()[0];
+							field.set(obj, readList((ArrayList) field.get(obj), name));
 						} else if (type.equals("class java.util.LinkedList")) {
-							// field.set(obj, readList(new LinkedList(), name,
-							// field));
+							ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+							Class<?> cl = (Class<?>) genericType.getActualTypeArguments()[0];
+							field.set(obj, readList(new LinkedList(), name));
 						} else if (type.equals("class java.util.Vector")) {
-							// field.set(obj, readList(new Vector(), name,
-							// field));
+							ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+							Class<?> cl = (Class<?>) genericType.getActualTypeArguments()[0];
+							field.set(obj, readList(new Vector(), name));
 						} else if (type.equals("class java.util.Stack")) {
-							// field.set(obj, readList(new Stack(), name,
-							// field));
+							ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+							Class<?> cl = (Class<?>) genericType.getActualTypeArguments()[0];
+							field.set(obj, readList(new Stack(), name));
 						} else if (type.equals("class java.util.HashSet")) {
+							ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+							Class<?> cl = (Class<?>) genericType.getActualTypeArguments()[0];
 							field.set(obj, readSet(new HashSet(), name));
 						} else if (type.equals("class java.util.TreeSet")) {
+							ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+							Class<?> cl = (Class<?>) genericType.getActualTypeArguments()[0];
 							field.set(obj, readSet(new TreeSet(), name));
 						} else if (type.equals("class java.util.LinkedHashSet")) {
+							ParameterizedType genericType = (ParameterizedType) field.getGenericType();
+							Class<?> cl = (Class<?>) genericType.getActualTypeArguments()[0];
 							field.set(obj, readSet(new LinkedHashSet(), name));
 						} else if (type.equals("class java.util.HashMap")) {
 							field.set(obj, readMap(new HashMap(), name));
@@ -689,7 +906,7 @@ public class ObjectInputStream {
 							field.set(obj, readMap(new ConcurrentSkipListMap(), name));
 						} else if (field.get(obj) instanceof HDF5Serializable
 								&& field.getDeclaringClass() != field.getClass()) {
-							readObjectHelper(field.get(obj), "/" + path + "/" + localGroup);
+							readObjectHelper(field.get(obj), name);
 						}
 					} catch (IllegalArgumentException | IllegalAccessException | NullPointerException e) {
 						e.printStackTrace();
