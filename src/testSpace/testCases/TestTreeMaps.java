@@ -27,7 +27,7 @@ public class TestTreeMaps {
 		in = new ObjectInputStream(file);
 	}
 
-	@Ignore("boolean and char need to be converted to numeric")
+//	@Ignore("boolean and char need to be converted to numeric")
 	@Test
 	public void testBoolCharTreeMap() {
 		BoolCharTreeMapTest objA = new BoolCharTreeMapTest(true, (char) 'b',

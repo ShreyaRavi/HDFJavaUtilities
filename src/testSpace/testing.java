@@ -16,9 +16,10 @@ public class testing {
 	//	System.out.println(a.toString());
 		o.writeObject(a);
 		in.readObject(b);
-//		o.writeObject(b, "Updated Test");
+		System.out.println(b.toString());
+		o.writeObject(b, "Updated Test");
 		
-	//	System.out.println(b.toString());
+		
 	}
 	
 }

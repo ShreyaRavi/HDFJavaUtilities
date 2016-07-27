@@ -24,12 +24,13 @@ public class testDataA implements HDF5Serializable{
 //	public List<Integer> listTest = new ArrayList<Integer>();
 	public List<int[]> listArrayTest = new ArrayList<int[]>();
 	public List<Character> listTest = new ArrayList<Character>();
-	public Set<Integer> setTest = new TreeSet<Integer>();
-	public Map<Integer, Double> mapTest = new HashMap<Integer, Double>();
-	public transient Map<Object, Object> advancedMapTest = new HashMap<Object, Object>();
+	public Set<Character> setTest = new TreeSet<Character>();
+	public Map<Boolean, Character> mapTest = new HashMap<Boolean, Character>();
+	public Map<Object, Object> advancedMapTest = new HashMap<Object, Object>();
 	public String stringTest;
 	public byte byteTest;
 	public boolean booleanTest;
+	public testDataB objectTest = new testDataB();
 	public Collection[] collectionArrayTest = new Collection[3];
 	public Object[] arrayObjectArrayTest = new Object[3];
 	public testDataB[][] objectArrayTest = new testDataB[2][2];
@@ -43,10 +44,9 @@ public class testDataA implements HDF5Serializable{
 		doubleTest = val;
 		byteTest = 127;
 		listTest.add('a');
-		listTest.add('d');
+		listTest.add('a');
 		listArrayTest.add(new int[] {1, 2, 3});
 		listArrayTest.add(new int[] {4, 5, 6});
-		listArrayTest.set(0, null);
 		objectArrayTest[0][0] = new testDataB();
 		objectArrayTest[0][0].test2 = "works";
 		objectArrayTest[1][0] = new testDataB();
@@ -61,11 +61,11 @@ public class testDataA implements HDF5Serializable{
 		charArrayTest[1][0] = 'd';
 		charArrayTest[1][1] = 'e';
 		charArrayTest[1][2] = 'f';
-		setTest.add(3);
-		setTest.add(41);
-		setTest.add(11);
-		mapTest.put(2, 4.0);
-		mapTest.put(3, 3.141592);
+		setTest.add('a');
+		setTest.add('b');
+		setTest.add('c');
+		mapTest.put(true, 'p');
+		mapTest.put(false, 'i');
 		booleanTest = true;
 		stringTest = "Hello World";
 		shortTest = (short) val;
@@ -95,6 +95,7 @@ public class testDataA implements HDF5Serializable{
 				e.printStackTrace();
 			}
 	    }
+	    System.out.println("===============" + ((List<int[]>) collectionArrayTest[2]).get(0)[0]);
 		return returnString;
 	}
 

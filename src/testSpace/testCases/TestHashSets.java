@@ -64,7 +64,7 @@ public class TestHashSets {
 		assertArrayEquals(objA.getData(), objB.getData());
 	}
 	
-	@Ignore("Character HashSet test: giving an error - need to be converted to numeric")
+	//@Ignore("Character HashSet test: giving an error - need to be converted to numeric")
 	@Test
 	public void testCharHashSet() {
 		CharHashSetTest objA = new CharHashSetTest((char)'b',(char)'d',(char)'Z');
