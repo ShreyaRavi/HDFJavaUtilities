@@ -79,7 +79,7 @@ public class testDataA implements HDF5Serializable{
 	}
 	
 	public testDataA() {
-		stringTest = "";
+	//	stringTest = "";
 		booleanTest = false;
 	}
 	
