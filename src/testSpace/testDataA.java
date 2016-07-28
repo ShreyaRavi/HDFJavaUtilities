@@ -4,17 +4,17 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
-import HDFJavaUtils.interfaces.SerializeClassOptions;
-import HDFJavaUtils.interfaces.SerializeFieldOptions;
 import HDFJavaUtils.interfaces.HDF5Serializable;
+import HDFJavaUtils.interfaces.SerializeFieldOptions;
 
 public class testDataA implements HDF5Serializable{
-	public int integerTest;
+	public Integer integerTest;
 	public long longTest;
 	public double doubleTest;
 	public float floatTest;
@@ -23,20 +23,25 @@ public class testDataA implements HDF5Serializable{
 	public int[] intArrayTest = {1, 12, 53, 45, 76};
 //	public List<Integer> listTest = new ArrayList<Integer>();
 	public List<int[]> listArrayTest = new ArrayList<int[]>();
-	public List<Character> listTest = new ArrayList<Character>();
+	public List<Character> listTest = new LinkedList<Character>();
 	public Set<Character> setTest = new TreeSet<Character>();
 	public Map<Boolean, Character> mapTest = new HashMap<Boolean, Character>();
+	@SerializeFieldOptions(name = "SuperHard", path = "hidden")
 	public Map<Object, Object> advancedMapTest = new HashMap<Object, Object>();
 	public String stringTest;
 	public byte byteTest;
 	public boolean booleanTest;
 	public testDataB objectTest = new testDataB();
+//	Uninitialized instance variables won't be read correctly
+//		NullPointerException will be thrown because field.get(obj) will return null
+//	public int[] intArr;
 	public Collection[] collectionArrayTest = new Collection[3];
 	public Object[] arrayObjectArrayTest = new Object[3];
 	public testDataB[][] objectArrayTest = new testDataB[2][2];
 	public boolean[][][] boolArrayTest = new boolean[4][2][3];
 	public char[][] charArrayTest = new char[2][3];
 	public int[][][][] multiArrTest = new int[4][3][2][2];
+	public int hi;
 	
 	public testDataA(int val) {
 		integerTest = val;
@@ -76,6 +81,11 @@ public class testDataA implements HDF5Serializable{
 		arrayObjectArrayTest[1] = multiArrTest;
 		arrayObjectArrayTest[2] = boolArrayTest;
 		advancedMapTest.put(collectionArrayTest, arrayObjectArrayTest);
+//		intArr = new int[3];
+//		intArr[0] = 7;
+//		intArr[1] = 1;
+//		intArr[2] = 1;
+		hi = 8;
 	}
 	
 	public testDataA() {

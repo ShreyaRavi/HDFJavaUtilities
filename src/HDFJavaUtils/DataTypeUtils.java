@@ -5,6 +5,16 @@ import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.object.Datatype;
 import ncsa.hdf.object.h5.H5Datatype;
 
+/**
+ * DataTypeUtils is a utility class that determines the corresponding
+ * H5Datatype objects, HDF5Constants, or Class objects of data
+ * 
+ * @author Shreya Ravi
+ * @author Ben Bressette
+ * 
+ * @version 0.1
+ *
+ */
 public class DataTypeUtils {
 
 	/**
@@ -32,7 +42,7 @@ public class DataTypeUtils {
 	 * @return An H5Datatype object that corresponds to the input data
 	 */
 	public static H5Datatype getType(String type) {
-		if (type.contains("java.lang.String")) {
+		if (type.equals("java.lang.String")) {
 			return new H5Datatype(Datatype.CLASS_STRING, 1024, -1, -1);
 		}
 		try {
@@ -44,6 +54,18 @@ public class DataTypeUtils {
 			e.printStackTrace();
 			return null;
 		}
+	}
+	
+	public static H5Datatype getType(Class<?> type) {
+		if (type.equals(String.class)) {
+			return new H5Datatype(Datatype.CLASS_STRING, 1024, -1, -1);
+		}
+		int dataType = getDataType(type);
+		if (dataType == -1) {
+			return null;
+		} else {
+			return new H5Datatype(dataType);
+		}	
 	}
 	
 	/**
@@ -83,6 +105,8 @@ public class DataTypeUtils {
 	 * @return An int that represents the HDF5Constant that represents the type
 	 *         of input data
 	 */
+	// need to edit this so a class that happens to contain the word Char or Integer
+	// won't be recognized by this and return the incorrect HDF5Constant
 	public static int getDataType(String type) {
 		if ((type.lastIndexOf("[I") == (type.length() - 2))
 				|| type.contains("Integer"))
@@ -126,7 +150,7 @@ public class DataTypeUtils {
 	}
 	
 	public static int getDataType(Object obj) {
-		String type = obj.getClass().getComponentType().toString();
+		String type = obj.getClass().toString();
 		return getDataType(type);
 	}
 
@@ -159,5 +183,5 @@ public class DataTypeUtils {
 		}
 		return null;
 	}
-
+	
 }

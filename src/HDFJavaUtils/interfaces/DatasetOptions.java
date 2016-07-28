@@ -5,12 +5,15 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import HDFJavaUtils.constants.DatasetConstants;
+
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface SerializeFieldOptions {
+public @interface DatasetOptions {
 	
-	String name() default "";
+	long[] chunkDims() default {-1};
+	int gzip() default DatasetConstants.GZIP;
+	boolean isExtendible() default DatasetConstants.IS_EXTENDIBLE;
 	
-	String path() default "DEFAULT";
-			
+
 }

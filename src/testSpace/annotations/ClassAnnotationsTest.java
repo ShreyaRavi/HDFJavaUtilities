@@ -1,7 +1,7 @@
 package testSpace.annotations;
 
-import HDFJavaUtils.annotations.SerializeClassOptions;
-import HDFJavaUtils.annotations.SerializeFieldOptions;
+import HDFJavaUtils.interfaces.SerializeClassOptions;
+import HDFJavaUtils.interfaces.SerializeFieldOptions;
 import HDFJavaUtils.interfaces.HDF5Serializable;
 
 @SerializeClassOptions(path = "classPath", name = "className")
