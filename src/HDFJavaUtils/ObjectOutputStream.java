@@ -87,9 +87,9 @@ public class ObjectOutputStream {
 	 * @param name
 	 *            The name of the dataset
 	 */
-	public void writeDouble(double val, String name) {
+	public void writeDouble(Object val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_DOUBLE);
-		double[] data = { val };
+		double[] data = { (double)val };
 		long[] dims = { 1 };
 		writeData(type, data, dims, name);
 	}
@@ -132,9 +132,9 @@ public class ObjectOutputStream {
 	 * @param name
 	 *            The name of the dataset
 	 */
-	public void writeFloat(float val, String name) {
+	public void writeFloat(Object val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_FLOAT);
-		float[] data = { val };
+		float[] data = { (float)val };
 		long[] dims = { 1 };
 		writeData(type, data, dims, name);
 	}
@@ -147,9 +147,9 @@ public class ObjectOutputStream {
 	 * @param name
 	 *            The name of the dataset
 	 */
-	public void writeBoolean(boolean val, String name) {
+	public void writeBoolean(Object val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_HBOOL);
-		int[] data = { val ? 1 : 0 };
+		int[] data = { (boolean)val ? 1 : 0 };
 		long[] dims = { 1 };
 		writeData(type, data, dims, name);
 	}
@@ -162,9 +162,9 @@ public class ObjectOutputStream {
 	 * @param name
 	 *            The name of the dataset
 	 */
-	public void writeLong(long val, String name) {
+	public void writeLong(Object val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_LONG);
-		long[] data = { val };
+		long[] data = { (long)val };
 		long[] dims = { 1 };
 		writeData(type, data, dims, name);
 	}
@@ -177,9 +177,9 @@ public class ObjectOutputStream {
 	 * @param name
 	 *            The name of the dataset
 	 */
-	public void writeShort(short val, String name) {
+	public void writeShort(Object val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_SHORT);
-		short[] data = { val };
+		short[] data = { (short)val };
 		long[] dims = { 1 };
 		writeData(type, data, dims, name);
 	}
@@ -192,9 +192,9 @@ public class ObjectOutputStream {
 	 * @param name
 	 *            The name of the dataset
 	 */
-	public void writeByte(byte val, String name) {
+	public void writeByte(Object val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_INT8);
-		byte[] data = { val };
+		byte[] data = { (byte)val };
 		long[] dims = { 1 };
 		writeData(type, data, dims, name);
 	}
@@ -207,9 +207,9 @@ public class ObjectOutputStream {
 	 * @param name
 	 *            The name of the dataset
 	 */
-	public void writeChar(char val, String name) {
+	public void writeChar(Object val, String name) {
 		final H5Datatype type = new H5Datatype(HDF5Constants.H5T_NATIVE_CHAR);
-		int[] data = { val };
+		int[] data = { (int) ((char)val) };
 		long[] dims = { 1 };
 		writeData(type, data, dims, name);
 	}
@@ -714,44 +714,64 @@ public class ObjectOutputStream {
 						name = defaultPath + "/" + path + "/" + localGroup + "/" + name;
 
 						Class<?> type = field.getType();
-						 if(PRIMITIVE_TYPE.contains(type)) {
-							if (type.equals(int.class)) {
-								writeInt(field.get(obj), name);
-							} else if (type.equals(long.class)) {
-								writeLong(field.getLong(obj), name);
-							} else if (type.equals(double.class)) {
-								writeDouble(field.getDouble(obj), name);
-							} else if (type.equals(float.class)) {
-								writeFloat(field.getFloat(obj), name);
-							} else if (type.equals(short.class)) {
-								writeShort(field.getShort(obj), name);
-							} else if (type.equals(char.class)) {
-								writeChar(field.getChar(obj), name);
-							} else if (type.equals(boolean.class)) {
-								writeBoolean(field.getBoolean(obj), name);
-							} else if (type.equals(byte.class)) {
-								writeByte(field.getByte(obj), name);
-							}
-						} else if (WRAPPER_TYPE.contains(type)) {
-							if (type.equals(Integer.class)) {
-								writeInt(field.get(obj), name);
-							} else if (type.equals(Long.class)) {
-								writeLong(field.getLong(obj), name);
-							} else if (type.equals(Double.class)) {
-								writeDouble(field.getDouble(obj), name);
-							} else if (type.equals(Float.class)) {
-								writeFloat(field.getFloat(obj), name);
-							} else if (type.equals(Short.class)) {
-								writeShort(field.getShort(obj), name);
-							} else if (type.equals(Character.class)) {
-								writeChar(field.getChar(obj), name);
-							} else if (type.equals(String.class)) {
-								writeString((String) field.get(obj), name);
-							} else if (type.equals(Boolean.class)) {
-								writeBoolean(field.getBoolean(obj), name);
-							} else if (type.equals(Byte.class)) {
-								writeByte(field.getByte(obj), name);
-							}
+						if (type.equals(int.class) || type.equals(Integer.class)) {
+							writeInt(field.get(obj), name);
+						} else if (type.equals(long.class) || type.equals(Long.class)) {
+							writeLong(field.get(obj), name);
+						} else if (type.equals(double.class) || type.equals(Double.class)) {
+							writeDouble(field.get(obj), name);
+						} else if (type.equals(short.class) || type.equals(Short.class)) {
+							writeShort(field.get(obj), name);
+						} else if (type.equals(float.class) || type.equals(Float.class)) {
+							writeFloat(field.get(obj), name);
+						} else if (type.equals(byte.class) || type.equals(Byte.class)) {
+							writeByte(field.get(obj), name);
+						} else if (type.equals(boolean.class) || type.equals(Boolean.class)) {
+							writeBoolean(field.get(obj), name);
+						} else if (type.equals(char.class) || type.equals(Character.class)) {
+							writeChar(field.get(obj), name);
+						} else if (type.equals(String.class)) {
+							writeString((String) field.get(obj), name);
+//						}
+//						
+//						 if(PRIMITIVE_TYPE.contains(type)) {
+//							if (type.equals(int.class)) {
+//								writeInt(field.get(obj), name);
+//							} else if (type.equals(long.class)) {
+//								writeLong(field.get(obj), name);
+//							} else if (type.equals(double.class)) {
+//								writeDouble(field.get(obj), name);
+//							} else if (type.equals(float.class)) {
+//								writeFloat(field.get(obj), name);
+//							} else if (type.equals(short.class)) {
+//								writeShort(field.get(obj), name);
+//							} else if (type.equals(char.class)) {
+//								writeChar(field.get(obj), name);
+//							} else if (type.equals(boolean.class)) {
+//								writeBoolean(field.get(obj), name);
+//							} else if (type.equals(byte.class)) {
+//								writeByte(field.get(obj), name);
+//							}
+//						} else if (WRAPPER_TYPE.contains(type)) {
+//							if (type.equals(Integer.class)) {
+//								writeInt(field.get(obj), name);
+//							} else if (type.equals(Long.class)) {
+//								writeLong(field.get(obj), name);
+//							} else if (type.equals(Double.class)) {
+//								writeDouble(field.get(obj), name);
+//							} else if (type.equals(Float.class)) {
+//								writeFloat(field.get(obj), name);
+//							} else if (type.equals(Short.class)) {
+//								writeShort(field.get(obj), name);
+//							} else if (type.equals(Character.class)) {
+//								writeChar(field.get(obj), name);
+//							} else if (type.equals(String.class)) {
+//								writeString((String) field.get(obj), name);
+//							} else if (type.equals(Boolean.class)) {
+//								writeBoolean(field.get(obj), name);
+//							} else if (type.equals(Byte.class)) {
+//								writeByte(field.get(obj), name);
+//							}
 						}  else if (type.isArray()) {
 							if (dims[0] == -1) {
 								int[] temp = getDimensions(field.get(obj));

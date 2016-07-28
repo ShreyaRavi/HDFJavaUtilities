@@ -146,11 +146,59 @@ public class DatasetUtils {
 			typeID = HDF5Constants.H5T_NATIVE_INT;
 		}
 		final H5Datatype type = new H5Datatype(typeID);
+		long[] actualDims = intToLongArr(getDimensions(data));
+		Object[] fillObj = {fill};
 		try {
-			file.createScalarDS("/" + name, null, type, dims, maxDims, chunkDims, gzip, fill, data);
+			H5ScalarDS dset = (H5ScalarDS)file.createScalarDS("/" + name, null,
+					type, actualDims, maxDims, chunkDims, gzip, fillObj, data);
+			dset.extend(dims);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public void writeFixedDS(String fileName, String name, long[] dims, Object data, long[] chunkDims,
+			int gzip, Object fill) {
+		H5File file = new H5File(fileName, H5File.WRITE);
+		int typeID = DataTypeUtils.getDataType(data);
+		if (typeID == HDF5Constants.H5T_NATIVE_CHAR) {
+			data = copyArrayCharToInt(data);
+			typeID = HDF5Constants.H5T_NATIVE_INT;
+		} else if (typeID == HDF5Constants.H5T_NATIVE_HBOOL) {
+			data = copyArrayBoolToInt(data);
+			typeID = HDF5Constants.H5T_NATIVE_INT;
+		}
+		final H5Datatype type = new H5Datatype(typeID);
+		long[] actualDims = intToLongArr(getDimensions(data));
+		Object[] fillObj = {fill};
+		try {
+			H5ScalarDS dset = (H5ScalarDS)file.createScalarDS("/" + name, null,
+					type, actualDims, dims, chunkDims, gzip, fillObj, data);
+			dset.extend(dims);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void writeFixedDS(String fileName, String name, long[] dims, Object data, long[] chunkDims, Object fill) {
+		writeFixedDS(fileName, name, dims, data, chunkDims, 0, fill);
+	}
+	
+	public void writeFixedDS(String fileName, String name, long[] dims, Object data, Object fill) {
+		long[] chunkDims = null;
+		writeFixedDS(fileName, name, dims, data, chunkDims, fill);
+	}
+	
+	public void writeFixedDS(String fileName, String name, long[] dims, Object data) {
+		writeFixedDS(fileName, name, dims, data, null);
+	}
+	
+	public void writeFixedDS(String fileName, String name, long[] dims, Object data, long[] chunkDims, int gzip) {
+		writeFixedDS(fileName, name ,dims, data, chunkDims, gzip, null);
+	}
+	
+	public void writeFixedDS(String fileName, String name, long[] dims, Object data, long[] chunkDims) {
+		writeFixedDS(fileName, name ,dims, data, chunkDims, 0);
 	}
 	
 	

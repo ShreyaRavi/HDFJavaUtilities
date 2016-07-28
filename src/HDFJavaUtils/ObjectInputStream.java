@@ -884,45 +884,63 @@ public class ObjectInputStream {
 						name = defaultPath + "/" + path + "/" + localGroup + "/" + name;
 						
 						Class<?> type = field.getType();
-						
-						if (PRIMITIVE_TYPE.contains(type)) {
-							if (type.equals(int.class)) {
-								field.set(obj, readInt(name));
-							} else if (type.equals(long.class)) {
-								field.set(obj, readLong(name));
-							} else if (type.equals(double.class)) {
-								field.set(obj, readDouble(name));
-							} else if (type.equals(float.class)) {
-								field.set(obj, readFloat(name));
-							} else if (type.equals(short.class)) {
-								field.set(obj, readShort(name));
-							} else if (type.equals(char.class)) {
-								field.set(obj, readChar(name));
-							} else if (type.equals(boolean.class)) {
-								field.set(obj, readBoolean(name));
-							} else if (type.equals(byte.class)) {
-								field.set(obj, readByte(name));
-							}
-						} else if(WRAPPER_TYPE.contains(type)) {
-							if (type.equals(Integer.class)) {
-								field.set(obj, readInt(name));
-							} else if (type.equals(Long.class)) {
-								field.set(obj, readLong(name));
-							} else if (type.equals(Double.class)) {
-								field.set(obj, readDouble(name));
-							} else if (type.equals(Float.class)) {
-								field.set(obj, readFloat(name));
-							} else if (type.equals(Short.class)) {
-								field.set(obj, readShort(name));
-							} else if (type.equals(Character.class)) {
-								field.set(obj, readChar(name));
-							} else if (type.equals(String.class)) {
-								field.set(obj, readString(name));
-							} else if (type.equals(Boolean.class)) {
-								field.set(obj, readBoolean(name));
-							} else if (type.equals(Byte.class)) {
-								field.set(obj, readByte(name));
-							}
+						if (type.equals(int.class) || type.equals(Integer.class)) {
+							field.set(obj, readInt(name));
+						} else if (type.equals(long.class) || type.equals(Long.class)) {
+							field.set(obj, readLong(name));
+						} else if (type.equals(double.class) || type.equals(Double.class)) {
+							field.set(obj, readDouble(name));
+						} else if (type.equals(short.class) || type.equals(Short.class)) {
+							field.set(obj, readShort(name));
+						} else if (type.equals(float.class) || type.equals(Float.class)) {
+							field.set(obj, readFloat(name));
+						} else if (type.equals(byte.class) || type.equals(Byte.class)) {
+							field.set(obj, readByte(name));
+						} else if (type.equals(boolean.class) || type.equals(Boolean.class)) {
+							field.set(obj, readBoolean(name));
+						} else if (type.equals(char.class) || type.equals(Character.class)) {
+							field.set(obj, readChar(name));
+						} else if (type.equals(String.class)) {
+							field.set(obj, readString(name));
+//						}
+//						if (PRIMITIVE_TYPE.contains(type)) {
+//							if (type.equals(int.class)) {
+//								field.set(obj, readInt(name));
+//							} else if (type.equals(long.class)) {
+//								field.set(obj, readLong(name));
+//							} else if (type.equals(double.class)) {
+//								field.set(obj, readDouble(name));
+//							} else if (type.equals(float.class)) {
+//								field.set(obj, readFloat(name));
+//							} else if (type.equals(short.class)) {
+//								field.set(obj, readShort(name));
+//							} else if (type.equals(char.class)) {
+//								field.set(obj, readChar(name));
+//							} else if (type.equals(boolean.class)) {
+//								field.set(obj, readBoolean(name));
+//							} else if (type.equals(byte.class)) {
+//								field.set(obj, readByte(name));
+//							}
+//						} else if(WRAPPER_TYPE.contains(type)) {
+//							if (type.equals(Integer.class)) {
+//								field.set(obj, readInt(name));
+//							} else if (type.equals(Long.class)) {
+//								field.set(obj, readLong(name));
+//							} else if (type.equals(Double.class)) {
+//								field.set(obj, readDouble(name));
+//							} else if (type.equals(Float.class)) {
+//								field.set(obj, readFloat(name));
+//							} else if (type.equals(Short.class)) {
+//								field.set(obj, readShort(name));
+//							} else if (type.equals(Character.class)) {
+//								field.set(obj, readChar(name));
+//							} else if (type.equals(String.class)) {
+//								field.set(obj, readString(name));
+//							} else if (type.equals(Boolean.class)) {
+//								field.set(obj, readBoolean(name));
+//							} else if (type.equals(Byte.class)) {
+//								field.set(obj, readByte(name));
+//							}
 						} else if (type.isArray()) {
 							field.set(obj, readArray(name, DataTypeUtils.getDataType(field), field.get(obj)));
 						} else if (List.class.isAssignableFrom(type)) {
