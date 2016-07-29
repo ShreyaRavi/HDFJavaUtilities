@@ -3,6 +3,8 @@ package HDFJavaUtils;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -17,8 +19,6 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
 import java.util.Vector;
-
-import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils.Collections;
 
 import HDFJavaUtils.interfaces.HDF5Serializable;
 import HDFJavaUtils.interfaces.Ignore;
@@ -47,6 +47,7 @@ public class ObjectOutputStream {
 
 	private H5File file;
 	private String defaultPath;
+	private String bufferedPath = "";
 	private int recursiveIterator;
 	private static final Set<Class<?>> WRAPPER_TYPE = new HashSet<Class<?>>(
 			Arrays.asList(new Class<?>[] { Boolean.class, Character.class, Integer.class, Short.class, Long.class,
@@ -241,7 +242,16 @@ public class ObjectOutputStream {
 	 *            The object to be serialized
 	 */
 	public void writeObject(Object obj) {
-		writeObjectHelper(obj, null);
+		try {
+			Method method = obj.getClass().getDeclaredMethod("writeObject",
+					new Class[] { HDFJavaUtils.ObjectOutputStream.class });
+			method.setAccessible(true);
+			if (obj instanceof HDF5Serializable)
+				method.invoke(obj, this);
+		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
+				| InvocationTargetException e) {
+			writeObjectHelper(obj, null);
+		}
 	}
 
 	/**
@@ -256,6 +266,46 @@ public class ObjectOutputStream {
 	 *            The location the datasets will be stored in the file
 	 */
 	public void writeObject(Object obj, String path) {
+		try {
+			Method method = obj.getClass().getDeclaredMethod("writeObject",
+					new Class[] { HDFJavaUtils.ObjectOutputStream.class });
+			method.setAccessible(true);
+			bufferedPath = path + "/";
+			if (obj instanceof HDF5Serializable)
+				method.invoke(obj, this);
+			bufferedPath = "";
+		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
+				| InvocationTargetException e) {
+			bufferedPath = "";
+			writeObjectHelper(obj, path);
+		}
+	}
+
+	/**
+	 * Acts similar to Java's defaultWriteObject function. Will write basic from
+	 * a class and serialize it to the file. Object must be implementing the
+	 * HDF5Serializable interface. Any field with the transient tag will be
+	 * ignored
+	 * 
+	 * @param obj
+	 *            The object to be serialized
+	 */
+	public void defaultWriteObject(Object obj) {
+		writeObjectHelper(obj, null);
+	}
+
+	/**
+	 * Acts similar to Java's defaultWriteObject function. Will write basic from
+	 * a class and serialize it to the file. Object must be implementing the
+	 * HDF5Serializable interface. Any field with the transient tag will be
+	 * ignored
+	 * 
+	 * @param obj
+	 *            The object to be serialized
+	 * @param path
+	 *            The location the datasets will be stored in the file
+	 */
+	public void defaultWriteObject(Object obj, String path) {
 		writeObjectHelper(obj, path + "/");
 	}
 
@@ -272,10 +322,12 @@ public class ObjectOutputStream {
 
 	// Writes an array of n-dimensions to a dataset/file
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private <T> void writeArray(long[] dimensions, Object obj, String name, int HDF5Datatype) {
+	private <T> void writeArray(Object obj, String name) {
 		H5Datatype atrType = DataTypeUtils.getType("Integer");
+		int HDF5Datatype = DataTypeUtils.getDataType(obj);
 		H5Datatype type = new H5Datatype(HDF5Datatype);
 
+		long[] dimensions = getLongDimensions(obj);
 		// If type is primitive
 		if (HDF5Datatype != -1) {
 			Object data;
@@ -306,7 +358,10 @@ public class ObjectOutputStream {
 				intDims[i] = (int) dimensions[i];
 
 			Attribute dimsAttr = new Attribute("dims", atrType, new long[] { intDims.length }, intDims);
-			writeAttribute(name, dimsAttr);
+			Datatype attrType = new H5Datatype(Datatype.CLASS_STRING, obj.getClass().toString().length() + 1, -1, -1);
+			Attribute classAttr = new Attribute("class", attrType, new long[] { 1 },
+					new String[] { obj.getClass().getName() });
+			writeAttribute(name, dimsAttr, classAttr);
 		} else {
 			ArrayList<Integer> locations = new ArrayList<>();
 			createPath(name, null);
@@ -323,11 +378,7 @@ public class ObjectOutputStream {
 			for (T i : flat) {
 				if (i != null) {
 					if (i.getClass().isArray()) {
-						int[] innerDims = getDimensions(i);
-						long[] longDims = new long[innerDims.length];
-						for (int j = 0; j < innerDims.length; j++)
-							longDims[j] = innerDims[j];
-						writeArray(longDims, i, name + "/" + index, DataTypeUtils.getDataType(i));
+						writeArray(i, name + "/" + index);
 					} else if (Collection.class.isAssignableFrom(i.getClass())) {
 						if (List.class.isAssignableFrom(i.getClass()))
 							writeList((List) i, name + "/" + index);
@@ -354,7 +405,10 @@ public class ObjectOutputStream {
 
 			Attribute dimsAttr = new Attribute("dims", atrType, new long[] { dims.length }, dims);
 			Attribute locationsAttr = new Attribute("locations", atrType, new long[] { locations.size() }, loc);
-			writeAttribute(name, dimsAttr, locationsAttr);
+			Datatype attrType = new H5Datatype(Datatype.CLASS_STRING, obj.getClass().toString().length() + 1, -1, -1);
+			Attribute classAttr = new Attribute("class", attrType, new long[] { 1 },
+					new String[] { obj.getClass().getName() });
+			writeAttribute(name, dimsAttr, locationsAttr, classAttr);
 		}
 	}
 
@@ -394,8 +448,7 @@ public class ObjectOutputStream {
 			for (int i = 0; i < list.size(); i++) {
 				if (list.get(i) != null) {
 					if (compType.isArray())
-						writeArray(new long[] { Array.getLength(list.get(i)) }, list.get(i), name + "/" + i,
-								DataTypeUtils.getDataType(list.get(i).getClass().toString()));
+						writeArray(list.get(i), name + "/" + i);
 					else if (List.class.isAssignableFrom(compType))
 						writeList((List) list.get(i), name + "/" + i);
 					else if (Set.class.isAssignableFrom(compType))
@@ -474,8 +527,7 @@ public class ObjectOutputStream {
 				if (it.next() != null) {
 					Object obj = it.next();
 					if (compType.isArray())
-						writeArray(new long[] { Array.getLength(obj) }, obj, name + "/" + i,
-								DataTypeUtils.getDataType(obj.getClass().toString()));
+						writeArray(obj, name + "/" + i);
 					else if (List.class.isAssignableFrom(compType))
 						writeList((List) obj, name + "/" + i);
 					else if (Set.class.isAssignableFrom(compType))
@@ -572,8 +624,7 @@ public class ObjectOutputStream {
 				for (int i = 0; i < keys.length; i++) {
 					if (keys[i] != null) {
 						if (keyClass.isArray())
-							writeArray(new long[] { Array.getLength(keys[i]) }, keys[i], name + "/keys/" + i,
-									DataTypeUtils.getDataType(keys[i].getClass().toString()));
+							writeArray(keys[i], name + "/keys/" + i);
 						else if (List.class.isAssignableFrom(keyClass))
 							writeList((List) keys[i], name + "/keys/" + i);
 						else if (Set.class.isAssignableFrom(keyClass))
@@ -630,8 +681,7 @@ public class ObjectOutputStream {
 				for (int i = 0; i < vals.length; i++) {
 					if (vals[i] != null) {
 						if (valClass.isArray())
-							writeArray(new long[] { Array.getLength(vals[i]) }, vals[i], name + "/values/" + i,
-									DataTypeUtils.getDataType(vals[i].getClass().toString()));
+							writeArray(vals[i], name + "/values/" + i);
 						else if (List.class.isAssignableFrom(valClass))
 							writeList((List) vals[i], name + "/values/" + i);
 						else if (Set.class.isAssignableFrom(valClass))
@@ -674,6 +724,10 @@ public class ObjectOutputStream {
 			String path = "";
 			SerializeClassOptions options = (SerializeClassOptions) objClass.getAnnotation(SerializeClassOptions.class);
 
+			if (bufferedPath != null)
+				path += bufferedPath;
+			bufferedPath = "";
+
 			if (group != null) {
 				path += group + "/";
 			}
@@ -695,7 +749,6 @@ public class ObjectOutputStream {
 				field.setAccessible(true);
 				recursiveIterator = 0;
 				String name = "";
-				long[] dims = { -1 };
 				String localGroup = "";
 				Annotation anno = field.getAnnotation(SerializeFieldOptions.class);
 				SerializeFieldOptions fieldOptions = (SerializeFieldOptions) anno;
@@ -712,78 +765,89 @@ public class ObjectOutputStream {
 							createPath(localGroup, defaultPath + "/" + path);
 
 						name = defaultPath + "/" + path + "/" + localGroup + "/" + name;
+						writeSingleObject(field.get(obj), name);
 
-						Class<?> type = field.getType();
-						 if(PRIMITIVE_TYPE.contains(type)) {
-							if (type.equals(int.class)) {
-								writeInt(field.get(obj), name);
-							} else if (type.equals(long.class)) {
-								writeLong(field.getLong(obj), name);
-							} else if (type.equals(double.class)) {
-								writeDouble(field.getDouble(obj), name);
-							} else if (type.equals(float.class)) {
-								writeFloat(field.getFloat(obj), name);
-							} else if (type.equals(short.class)) {
-								writeShort(field.getShort(obj), name);
-							} else if (type.equals(char.class)) {
-								writeChar(field.getChar(obj), name);
-							} else if (type.equals(boolean.class)) {
-								writeBoolean(field.getBoolean(obj), name);
-							} else if (type.equals(byte.class)) {
-								writeByte(field.getByte(obj), name);
-							}
-						} else if (WRAPPER_TYPE.contains(type)) {
-							if (type.equals(Integer.class)) {
-								writeInt(field.get(obj), name);
-							} else if (type.equals(Long.class)) {
-								writeLong(field.getLong(obj), name);
-							} else if (type.equals(Double.class)) {
-								writeDouble(field.getDouble(obj), name);
-							} else if (type.equals(Float.class)) {
-								writeFloat(field.getFloat(obj), name);
-							} else if (type.equals(Short.class)) {
-								writeShort(field.getShort(obj), name);
-							} else if (type.equals(Character.class)) {
-								writeChar(field.getChar(obj), name);
-							} else if (type.equals(String.class)) {
-								writeString((String) field.get(obj), name);
-							} else if (type.equals(Boolean.class)) {
-								writeBoolean(field.getBoolean(obj), name);
-							} else if (type.equals(Byte.class)) {
-								writeByte(field.getByte(obj), name);
-							}
-						}  else if (type.isArray()) {
-							if (dims[0] == -1) {
-								int[] temp = getDimensions(field.get(obj));
-								dims = new long[temp.length];
-								for (int i = 0; i < temp.length; i++)
-									dims[i] = (long) temp[i];
-							}
-							writeArray(dims, field.get(obj), name, DataTypeUtils.getDataType(field));
-						} else if (List.class.isAssignableFrom(type)) {
-							writeList((List) field.get(obj), name);
-						} else if (Set.class.isAssignableFrom(type)) {
-							writeSet((Set) field.get(obj), name);
-						} else if (Map.class.isAssignableFrom(type)) {
-							writeMap((Map) field.get(obj), name);
-						} else if (field.get(obj) instanceof HDF5Serializable
-								&& field.getDeclaringClass() != field.getClass()) {
-							writeObjectHelper(field.get(obj), name);
-						}
-					} catch (IllegalArgumentException | IllegalAccessException | SecurityException e) {
+					} catch (IllegalAccessException e) {
 						e.printStackTrace();
 					} catch (NullPointerException e) {
 
 					}
 				}
 			}
+		} else {
+			String name = defaultPath + "/";
+			if (bufferedPath != null)
+				name += bufferedPath;
+			if (group == null || group.equals(""))
+				name += obj.getClass().getName();
+			else
+				name += group;
+			writeSingleObject(obj, name);
+		}
+	}
+
+	@SuppressWarnings("rawtypes")
+	private void writeSingleObject(Object obj, String name) {
+		Class<?> type = obj.getClass();
+		try {
+			if (PRIMITIVE_TYPE.contains(type)) {
+				if (type.equals(int.class)) {
+					writeInt(obj, name);
+				} else if (type.equals(long.class)) {
+					writeLong((long) obj, name);
+				} else if (type.equals(double.class)) {
+					writeDouble((double) obj, name);
+				} else if (type.equals(float.class)) {
+					writeFloat((float) obj, name);
+				} else if (type.equals(short.class)) {
+					writeShort((short) obj, name);
+				} else if (type.equals(char.class)) {
+					writeChar((char) obj, name);
+				} else if (type.equals(boolean.class)) {
+					writeBoolean((boolean) obj, name);
+				} else if (type.equals(byte.class)) {
+					writeByte((byte) obj, name);
+				}
+			} else if (WRAPPER_TYPE.contains(type)) {
+				if (type.equals(Integer.class)) {
+					writeInt(obj, name);
+				} else if (type.equals(Long.class)) {
+					writeLong((Long) obj, name);
+				} else if (type.equals(Double.class)) {
+					writeDouble((Double) obj, name);
+				} else if (type.equals(Float.class)) {
+					writeFloat((Float) obj, name);
+				} else if (type.equals(Short.class)) {
+					writeShort((Short) obj, name);
+				} else if (type.equals(Character.class)) {
+					writeChar((Character) obj, name);
+				} else if (type.equals(String.class)) {
+					writeString((String) obj, name);
+				} else if (type.equals(Boolean.class)) {
+					writeBoolean((Boolean) obj, name);
+				} else if (type.equals(Byte.class)) {
+					writeByte((Byte) obj, name);
+				}
+			} else if (type.isArray()) {
+				writeArray(obj, name);
+			} else if (List.class.isAssignableFrom(type)) {
+				writeList((List) obj, name);
+			} else if (Set.class.isAssignableFrom(type)) {
+				writeSet((Set) obj, name);
+			} else if (Map.class.isAssignableFrom(type)) {
+				writeMap((Map) obj, name);
+			} else if (obj instanceof HDF5Serializable) {
+				writeObject(obj, name);
+			}
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
 		}
 	}
 
 	// Creates a dataset and writes data to it
 	private void writeData(Datatype type, Object data, long[] dims, String name) {
 		try {
-			Dataset dset = (H5ScalarDS) file.createScalarDS("/" + name, null, type, dims, null, null, 0, null);
+			Dataset dset = (H5ScalarDS) file.createScalarDS(name, null, type, dims, null, null, 0, null);
 			int dataset_id = dset.open();
 			dset.write(data);
 			dset.close(dataset_id);
@@ -804,6 +868,35 @@ public class ObjectOutputStream {
 		int[] dims = new int[ndim];
 		ndim = 0;
 		for (int i : dims) {
+			dims[ndim] = -1;
+			if (obj != null) {
+				int length = Array.getLength(obj);
+				if (length > 0) {
+					dims[ndim] = length;
+					obj = Array.get(obj, 0);
+				} else {
+					dims[ndim] = 0;
+					obj = null;
+				}
+			}
+			cl = cl.getComponentType();
+			ndim++;
+		}
+		return dims;
+	}
+
+	// Returns the dimensions of an n-dimensional array
+	private static long[] getLongDimensions(Object arr) {
+		if (arr == null)
+			return null;
+
+		Object obj = arr;
+		Class<?> cl = arr.getClass();
+		int ndim = obj.getClass().toString().length() - obj.getClass().toString().replace("[", "").length();
+
+		long[] dims = new long[ndim];
+		ndim = 0;
+		for (long i : dims) {
 			dims[ndim] = -1;
 			if (obj != null) {
 				int length = Array.getLength(obj);
@@ -886,7 +979,6 @@ public class ObjectOutputStream {
 	// Writes one or more attributes to a file
 	private void writeAttribute(String name, Attribute... attr) {
 		HObject obj = null;
-
 		try {
 			obj = file.get(name);
 		} catch (Exception e) {
@@ -898,7 +990,7 @@ public class ObjectOutputStream {
 			for (Attribute a : attr)
 				file.writeAttribute(obj, a, false);
 		} catch (HDF5Exception e) {
-			e.printStackTrace();
+			// e.printStackTrace();
 		}
 	}
 

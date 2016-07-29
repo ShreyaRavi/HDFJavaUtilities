@@ -10,16 +10,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import HDFJavaUtils.ObjectInputStream;
+import HDFJavaUtils.ObjectOutputStream;
 import HDFJavaUtils.interfaces.HDF5Serializable;
 import HDFJavaUtils.interfaces.SerializeFieldOptions;
 
 public class testDataA implements HDF5Serializable{
+	public testDataB objectTest;
 	public Integer integerTest;
 	public long longTest;
 	public double doubleTest;
 	public float floatTest;
 	private short shortTest;
 	private char charTest;
+	public Object[] arrayObjectArrayTest;
 	public int[] intArrayTest = {1, 12, 53, 45, 76};
 //	public List<Integer> listTest = new ArrayList<Integer>();
 	public List<int[]> listArrayTest = new ArrayList<int[]>();
@@ -31,12 +35,7 @@ public class testDataA implements HDF5Serializable{
 	public String stringTest;
 	public byte byteTest;
 	public boolean booleanTest;
-	public testDataB objectTest = new testDataB();
-//	Uninitialized instance variables won't be read correctly
-//		NullPointerException will be thrown because field.get(obj) will return null
-//	public int[] intArr;
 	public Collection[] collectionArrayTest = new Collection[3];
-	public Object[] arrayObjectArrayTest = new Object[3];
 	public testDataB[][] objectArrayTest = new testDataB[2][2];
 	public boolean[][][] boolArrayTest = new boolean[4][2][3];
 	public char[][] charArrayTest = new char[2][3];
@@ -44,12 +43,15 @@ public class testDataA implements HDF5Serializable{
 	public int hi;
 	
 	public testDataA(int val) {
+		objectTest = new testDataB();
+		arrayObjectArrayTest = new Object[3];
 		integerTest = val;
 		longTest = val;
 		doubleTest = val;
 		byteTest = 127;
 		listTest.add('a');
 		listTest.add('a');
+		multiArrTest[0][0][0][0] = 55000;
 		listArrayTest.add(new int[] {1, 2, 3});
 		listArrayTest.add(new int[] {4, 5, 6});
 		objectArrayTest[0][0] = new testDataB();
@@ -58,7 +60,6 @@ public class testDataA implements HDF5Serializable{
 		objectArrayTest[1][0].test2 = "works twice";
 		boolArrayTest[0][0][2] = true;
 		floatTest = val;
-		multiArrTest[0][0][0][0] = 55000;
 		charTest = 'h';
 		charArrayTest[0][0] = 'a';
 		charArrayTest[0][1] = 'b';
@@ -100,13 +101,21 @@ public class testDataA implements HDF5Serializable{
 	    Field[] fields = objClass.getDeclaredFields();
 	    for(Field field : fields) {
 	    	try {
-				returnString += " " + field.getType() + ": " + field.get(this) + "\n";
+				returnString += " " + field.getName() + ": " + field.get(this) + "\n";
 			} catch (IllegalArgumentException | IllegalAccessException e) {
 				e.printStackTrace();
 			}
 	    }
-	    System.out.println("===============" + ((List<int[]>) collectionArrayTest[2]).get(0)[0]);
 		return returnString;
+	}
+	
+	private void writeObject(ObjectOutputStream oos) {
+		oos.defaultWriteObject(this);
+		ArrayList<Integer> test = new ArrayList<Integer>();
+	}
+	
+	private void readObject(ObjectInputStream in) {
+		in.defaultReadObject(this);
 	}
 
 }

@@ -3,6 +3,8 @@ package HDFJavaUtils;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,11 +49,12 @@ public class ObjectInputStream {
 
 	private H5File file;
 	private String defaultPath;
+	private String bufferedPath;
 	private int recursionIterator;
 
 	private static final Set<Class<?>> WRAPPER_TYPE = new HashSet<Class<?>>(
 			Arrays.asList(new Class<?>[] { Boolean.class, Character.class, Integer.class, Short.class, Long.class,
-					Float.class, Double.class, Byte.class }));
+					Float.class, Double.class, Byte.class, String.class }));
 	private static final Set<Class<?>> PRIMITIVE_TYPE = new HashSet<Class<?>>(Arrays.asList(new Class<?>[] {
 			boolean.class, char.class, int.class, short.class, long.class, float.class, double.class, byte.class }));
 
@@ -260,8 +263,18 @@ public class ObjectInputStream {
 	 * @param obj
 	 *            The object to be serialized
 	 */
-	public void readObject(Object obj) {
-		readObjectHelper(obj, null);
+	public Object readObject(Object obj) {
+		try {
+			Method method = obj.getClass().getDeclaredMethod("readObject",
+					new Class[] { HDFJavaUtils.ObjectInputStream.class });
+			method.setAccessible(true);
+			if (obj instanceof HDF5Serializable)
+				method.invoke(obj, this);
+		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
+				| InvocationTargetException e) {
+			obj = readObjectHelper(obj, null);
+		}
+		return obj;
 	}
 
 	/**
@@ -275,8 +288,50 @@ public class ObjectInputStream {
 	 * @param path
 	 *            The location of the datasets
 	 */
-	public void readObject(Object obj, String path) {
-		readObjectHelper(obj, path);
+	public Object readObject(Object obj, String path) {
+		try {
+			Method method = obj.getClass().getDeclaredMethod("readObject",
+					new Class[] { HDFJavaUtils.ObjectInputStream.class });
+			method.setAccessible(true);
+			bufferedPath = path;
+			if (obj instanceof HDF5Serializable)
+				method.invoke(obj, this);
+			bufferedPath = "";
+		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
+				| InvocationTargetException e) {
+			obj = readObjectHelper(obj, path + "/");
+		}
+		return obj;
+	}
+
+	/**
+	 * Acts similar to Java's readObject function. Will read basic data from a
+	 * H5File and deserialize it to the object Object must be implementing the
+	 * HDF5Serializable interface Any field with the transient tag will be
+	 * ignored
+	 * 
+	 * @param obj
+	 *            The object to be serialized
+	 * @param path
+	 *            The location of the datasets
+	 */
+	public Object defaultReadObject(Object obj, String path) {
+		obj = readObjectHelper(obj, path + "/");
+		return obj;
+	}
+
+	/**
+	 * Acts similar to Java's readObject function. Will read basic data from a
+	 * H5File and deserialize it to the object Object must be implementing the
+	 * HDF5Serializable interface Any field with the transient tag will be
+	 * ignored
+	 * 
+	 * @param obj
+	 *            The object to be serialized
+	 */
+	public Object defaultReadObject(Object obj) {
+		obj = readObjectHelper(obj, null);
+		return obj;
 	}
 
 	// Returns a character representation of a integer array
@@ -353,7 +408,7 @@ public class ObjectInputStream {
 	private Set<Character> copySetIntToChar(Set<Integer> set) {
 		ArrayList<Character> list = new ArrayList<Character>();
 		Class<?> type = set.getClass();
-		
+
 		Iterator<Integer> itr = set.iterator();
 		while (itr.hasNext())
 			list.add((Character) ((char) ((int) itr.next())));
@@ -364,7 +419,7 @@ public class ObjectInputStream {
 			return new LinkedHashSet<Character>(list);
 		else if (type.equals(TreeSet.class))
 			return new TreeSet<Character>(list);
-		
+
 		return null;
 	}
 
@@ -372,7 +427,7 @@ public class ObjectInputStream {
 	private Set<Boolean> copySetIntToBool(Set<Integer> set) {
 		ArrayList<Boolean> list = new ArrayList<Boolean>();
 		Class<?> type = set.getClass();
-		
+
 		Iterator<Integer> itr = set.iterator();
 		while (itr.hasNext()) {
 			boolean element = (itr.next() == 1 ? true : false);
@@ -384,20 +439,20 @@ public class ObjectInputStream {
 			return new LinkedHashSet<Boolean>(list);
 		else if (type.equals(TreeSet.class))
 			return new TreeSet<Boolean>(list);
-		
+
 		return null;
 	}
 
 	private List<Character> copyListIntToChar(List<Integer> list) {
 		ArrayList<Character> tempList = new ArrayList<Character>();
 		Class<?> type = list.getClass();
-		
+
 		for (int i = 0; i < list.size(); i++) {
 			int tmpInt = list.get(i);
 			char tmp = (char) tmpInt;
 			tempList.add(tmp);
 		}
-		
+
 		if (type.equals(ArrayList.class)) {
 			return new ArrayList<Character>(tempList);
 		} else if (type.equals(LinkedList.class)) {
@@ -409,14 +464,14 @@ public class ObjectInputStream {
 			newList.addAll(tempList);
 			return newList;
 		}
-		
+
 		return null;
 	}
 
 	private List<Boolean> copyListIntToBool(List<Integer> list) {
 		ArrayList<Boolean> tempList = new ArrayList<Boolean>();
 		Class<?> type = list.getClass();
-		
+
 		for (int i = 0; i < list.size(); i++) {
 			boolean element = (list.get(i) == 1 ? true : false);
 			tempList.add(element);
@@ -433,14 +488,22 @@ public class ObjectInputStream {
 			newList.addAll(tempList);
 			return newList;
 		}
-		
+
 		return null;
 	}
 
 	// Reads in an array
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private <T> Object readArray(String name, int HDF5Datatype, Object obj) {
+	private <T> Object readArray(String name) {
+		List<Attribute> attr = getObjectAttributes(name);
 		recursionIterator = 0;
+		Object obj = null;
+		try {
+			obj = Array.newInstance(Class.forName((String) getAttribute(attr, "class")), getAttributeDims(attr));
+		} catch (ClassNotFoundException e1) {
+			e1.printStackTrace();
+		}
+
 		Class<?> datatype = DataTypeUtils.getArrayType(obj);
 
 		if (datatype != null) {
@@ -464,8 +527,8 @@ public class ObjectInputStream {
 					data = copyArrayIntToBool(data, intDims);
 				} else {
 					data = Array.newInstance(datatype, intDims);
-					H5.H5Dread(dset_id, HDF5Datatype, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
-							HDF5Constants.H5P_DEFAULT, data);
+					H5.H5Dread(dset_id, DataTypeUtils.getDataType(datatype), HDF5Constants.H5S_ALL,
+							HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, data);
 				}
 
 				dset.close(dset_id);
@@ -476,28 +539,25 @@ public class ObjectInputStream {
 			}
 		} else {
 			try {
-				List<Attribute> attr = getObjectAttributes(name);
 				int dims[] = getAttributeDims(attr);
 				int info[] = getAttributeLocations(attr);
 				Class<?> cl = getBaseClass(obj);
-				
+
 				int length = 1;
 				for (int i : dims)
 					length *= i;
-				
+
 				Object objectArray = Array.newInstance(cl, dims);
 				T[] flatArray = (T[]) Array.newInstance(cl, length);
-				
+
 				for (int i = 0, j = 0; i <= info[info.length - 1]; i++) {
 					if (info[j] == i) {
 						attr = getObjectAttributes(name + "/" + info[j]);
 						String objClass = (String) getAttribute(attr, "class");
 						cl = Class.forName(objClass);
-						
+
 						if (cl.isArray()) {
-							Object arr = Array.newInstance(cl, getAttributeDims(attr));
-							Array.set(flatArray, info[j],
-									readArray(name + "/" + info[j], DataTypeUtils.getDataType(getBaseClass(arr)), arr));
+							Array.set(flatArray, info[j], readArray(name + "/" + info[j]));
 						} else if (Collection.class.isAssignableFrom(cl)) {
 							if (List.class.isAssignableFrom(cl)) {
 								Array.set(flatArray, info[j], readList((List) cl.newInstance(), name + "/" + info[j]));
@@ -529,14 +589,14 @@ public class ObjectInputStream {
 	private <T> List readList(List list, String name) {
 		List<Attribute> attr = getObjectAttributes(name);
 		String compClass = (String) getAttribute(attr, "componentClass");
-		
+
 		Class<?> cl = null;
 		try {
 			cl = Class.forName(compClass);
 		} catch (ClassNotFoundException | NullPointerException e1) {
 
 		}
-		
+
 		if (WRAPPER_TYPE.contains(cl) || PRIMITIVE_TYPE.contains(cl)) {
 			Object arr = read(name);
 			try {
@@ -548,27 +608,25 @@ public class ObjectInputStream {
 			} catch (IndexOutOfBoundsException e) {
 
 			}
-			
+
 			if (cl == Character.class)
 				list = copyListIntToChar(list);
 			if (cl == Boolean.class)
 				list = copyListIntToBool(list);
-			
+
 			return list;
 		} else {
 			try {
 				int info[] = getAttributeLocations(attr);
-				
+
 				for (int i = 0, j = 0; i <= info[info.length - 1]; i++) {
 					if (info[j] == i) {
 						attr = getObjectAttributes(name + "/" + info[j]);
 						String objClass = (String) getAttribute(attr, "class");
 						cl = Class.forName(objClass);
-						
+
 						if (cl.isArray()) {
-							Object arr = Array.newInstance(cl, getAttributeDims(attr));
-							list.add(
-									readArray(name + "/" + info[j], DataTypeUtils.getDataType(getBaseClass(arr)), arr));
+							list.add(readArray(name + "/" + info[j]));
 						} else if (Collection.class.isAssignableFrom(cl)) {
 							if (List.class.isAssignableFrom(cl)) {
 								list.add(readList((List) cl.newInstance(), name + "/" + info[j]));
@@ -599,14 +657,14 @@ public class ObjectInputStream {
 	private Set readSet(Set set, String name) {
 		List<Attribute> attr = getObjectAttributes(name);
 		String compClass = (String) getAttribute(attr, "componentClass");
-		
+
 		Class<?> cl = null;
 		try {
 			cl = Class.forName(compClass);
 		} catch (ClassNotFoundException e1) {
 			e1.printStackTrace();
 		}
-		
+
 		if (WRAPPER_TYPE.contains(cl)) {
 			Object arr = read(name);
 			try {
@@ -618,12 +676,12 @@ public class ObjectInputStream {
 			} catch (IndexOutOfBoundsException e) {
 
 			}
-			
+
 			if (cl == Character.class)
 				set = copySetIntToChar(set);
 			if (cl == Boolean.class)
 				set = copySetIntToBool(set);
-			
+
 			return set;
 		} else {
 			try {
@@ -633,10 +691,9 @@ public class ObjectInputStream {
 						attr = getObjectAttributes(name + "/" + info[j]);
 						String objClass = (String) getAttribute(attr, "class");
 						cl = Class.forName(objClass);
-						
+
 						if (cl.isArray()) {
-							Object arr = Array.newInstance(cl, getAttributeDims(attr));
-							set.add(readArray(name + "/" + info[j], DataTypeUtils.getDataType(getBaseClass(arr)), arr));
+							set.add(readArray(name + "/" + info[j]));
 						} else if (Collection.class.isAssignableFrom(cl)) {
 							if (List.class.isAssignableFrom(cl)) {
 								set.add(readList((List) cl.newInstance(), name + "/" + info[j]));
@@ -670,23 +727,23 @@ public class ObjectInputStream {
 		List<Attribute> valAttr = getObjectAttributes(name + "/values");
 		String valClassName = (String) getAttribute(valAttr, "class");
 		Class<?> valClass = null;
-		
+
 		try {
 			valClass = Class.forName(valClassName);
 		} catch (ClassNotFoundException e1) {
 			e1.printStackTrace();
 		}
-		
+
 		List<Attribute> keyAttr = getObjectAttributes(name + "/keys");
 		String keyClassName = (String) getAttribute(keyAttr, "class");
 		Class<?> keyClass = null;
-		
+
 		try {
 			keyClass = Class.forName(keyClassName);
 		} catch (ClassNotFoundException e1) {
 			e1.printStackTrace();
 		}
-		
+
 		if (WRAPPER_TYPE.contains(keyClass)) {
 			arrKeys = read(name + "/keys");
 			if (keyClass == Character.class) {
@@ -702,18 +759,16 @@ public class ObjectInputStream {
 		} else {
 			int[] info = getAttributeLocations(keyAttr);
 			arrKeys = Array.newInstance(keyClass, info[info.length - 1] + 1);
-			
+
 			for (int i = 0, j = 0; i <= info[info.length - 1]; i++) {
 				if (info[j] == i) {
 					try {
 						keyAttr = getObjectAttributes(name + "/keys/" + info[j]);
 						String objClass = (String) getAttribute(keyAttr, "class");
 						keyClass = Class.forName(objClass);
-						
+
 						if (keyClass.isArray()) {
-							Object arr = Array.newInstance(keyClass, getAttributeDims(keyAttr));
-							Array.set(arrKeys, i, readArray(name + "/keys/" + info[j],
-									DataTypeUtils.getDataType(getBaseClass(arr)), arr));
+							Array.set(arrKeys, i, readArray(name + "/keys/" + info[j]));
 						} else if (Collection.class.isAssignableFrom(keyClass)) {
 							if (List.class.isAssignableFrom(keyClass)) {
 								Array.set(arrKeys, i,
@@ -738,32 +793,30 @@ public class ObjectInputStream {
 		}
 		if (WRAPPER_TYPE.contains(valClass)) {
 			arrVals = read(name + "/values");
-			
+
 			if (valClass == Character.class) {
-				Object tmp = Array.newInstance(Character.class, Array.getLength(arrKeys));
+				Object tmp = Array.newInstance(Character.class, Array.getLength(arrVals));
 				copyArrayIntToChar(arrVals, tmp);
-				arrKeys = tmp;
+				arrVals = tmp;
 			}
 			if (valClass == Boolean.class) {
-				Object tmp = Array.newInstance(Boolean.class, Array.getLength(arrKeys));
+				Object tmp = Array.newInstance(Boolean.class, Array.getLength(arrVals));
 				copyArrayIntToBool(arrVals, tmp);
-				arrKeys = tmp;
+				arrVals = tmp;
 			}
 		} else {
 			int[] info = getAttributeLocations(valAttr);
 			arrVals = Array.newInstance(valClass, info[info.length - 1] + 1);
-			
+
 			for (int i = 0, j = 0; i <= info[info.length - 1]; i++) {
 				if (info[j] == i) {
 					try {
 						valAttr = getObjectAttributes(name + "/values/" + info[j]);
 						String objClass = (String) getAttribute(valAttr, "class");
 						valClass = Class.forName(objClass);
-						
+
 						if (valClass.isArray()) {
-							Object arr = Array.newInstance(valClass, getAttributeDims(valAttr));
-							Array.set(arrVals, i, readArray(name + "/values/" + info[j],
-									DataTypeUtils.getDataType(getBaseClass(arr)), arr));
+							Array.set(arrVals, i, readArray(name + "/values/" + info[j]));
 						} else if (Collection.class.isAssignableFrom(valClass)) {
 							if (List.class.isAssignableFrom(valClass)) {
 								Array.set(arrVals, i,
@@ -801,12 +854,12 @@ public class ObjectInputStream {
 
 	private static int[] longToIntArr(long[] longArr) {
 		int[] intArr = new int[longArr.length];
-		for (int i = 0; i < longArr.length; i++) 
+		for (int i = 0; i < longArr.length; i++)
 			intArr[i] = Long.valueOf(longArr[i]).intValue();
 		return intArr;
 	}
 
-	//Returns a list of Attributes from an Object
+	// Returns a list of Attributes from an Object
 	@SuppressWarnings("unchecked")
 	private List<Attribute> getObjectAttributes(String name) {
 		try {
@@ -818,20 +871,20 @@ public class ObjectInputStream {
 		}
 	}
 
-    private int[] getAttributeDims(List<Attribute> attr) {
-        for (Attribute a : attr)
-            if (a.getName().equals("dims"))
-                return (int[]) a.getValue();
-        return null;
-    }
-	
-    private int[] getAttributeLocations(List<Attribute> attr) {
-        for (Attribute a : attr)
-            if (a.getName().equals("locations"))
-                return (int[]) a.getValue();
-        return null;
-    }
-    
+	private int[] getAttributeDims(List<Attribute> attr) {
+		for (Attribute a : attr)
+			if (a.getName().equals("dims"))
+				return (int[]) a.getValue();
+		return null;
+	}
+
+	private int[] getAttributeLocations(List<Attribute> attr) {
+		for (Attribute a : attr)
+			if (a.getName().equals("locations"))
+				return (int[]) a.getValue();
+		return null;
+	}
+
 	// Finds the attribute with the given name in an attribute list
 	private Object getAttribute(List<Attribute> attr, String attrName) {
 		for (Attribute a : attr)
@@ -840,20 +893,23 @@ public class ObjectInputStream {
 		return null;
 	}
 
-	//Reads in the Object
-	@SuppressWarnings("rawtypes")
-	private <T> void readObjectHelper(Object obj, String group) {
+	// Reads in the Object
+	private <T> Object readObjectHelper(Object obj, String group) {
 		if (obj != null && obj instanceof HDF5Serializable) {
 			recursionIterator = 0;
 			Class<?> objClass = obj.getClass();
 			Field[] fields = objClass.getDeclaredFields();
 			String path = "";
 			SerializeClassOptions options = (SerializeClassOptions) objClass.getAnnotation(SerializeClassOptions.class);
-			
+
+			if (bufferedPath != null)
+				path += bufferedPath;
+			bufferedPath = "";
+
 			if (group != null) {
 				path += group + "/";
 			}
-			
+
 			if (options != null) {
 				path += options.path();
 				if (options.name().equals("")) {
@@ -864,115 +920,135 @@ public class ObjectInputStream {
 			} else {
 				path += "/" + obj.getClass().getSimpleName();
 			}
-			
+
 			for (Field field : fields) {
 				field.setAccessible(true);
 				String name = "";
 				String localGroup = "";
 				Annotation anno = field.getAnnotation(SerializeFieldOptions.class);
 				SerializeFieldOptions fieldOptions = (SerializeFieldOptions) anno;
-				
+
 				if (anno != null) {
 					name = fieldOptions.name();
 					localGroup = fieldOptions.path();
 				}
-				
+
 				if (!Modifier.isTransient(field.getModifiers()) && !field.isAnnotationPresent(Ignore.class)) {
 					try {
 						if (name == "")
 							name = field.getName();
 						name = defaultPath + "/" + path + "/" + localGroup + "/" + name;
-						
+
 						Class<?> type = field.getType();
-						
-						if (PRIMITIVE_TYPE.contains(type)) {
-							if (type.equals(int.class)) {
-								field.set(obj, readInt(name));
-							} else if (type.equals(long.class)) {
-								field.set(obj, readLong(name));
-							} else if (type.equals(double.class)) {
-								field.set(obj, readDouble(name));
-							} else if (type.equals(float.class)) {
-								field.set(obj, readFloat(name));
-							} else if (type.equals(short.class)) {
-								field.set(obj, readShort(name));
-							} else if (type.equals(char.class)) {
-								field.set(obj, readChar(name));
-							} else if (type.equals(boolean.class)) {
-								field.set(obj, readBoolean(name));
-							} else if (type.equals(byte.class)) {
-								field.set(obj, readByte(name));
-							}
-						} else if(WRAPPER_TYPE.contains(type)) {
-							if (type.equals(Integer.class)) {
-								field.set(obj, readInt(name));
-							} else if (type.equals(Long.class)) {
-								field.set(obj, readLong(name));
-							} else if (type.equals(Double.class)) {
-								field.set(obj, readDouble(name));
-							} else if (type.equals(Float.class)) {
-								field.set(obj, readFloat(name));
-							} else if (type.equals(Short.class)) {
-								field.set(obj, readShort(name));
-							} else if (type.equals(Character.class)) {
-								field.set(obj, readChar(name));
-							} else if (type.equals(String.class)) {
-								field.set(obj, readString(name));
-							} else if (type.equals(Boolean.class)) {
-								field.set(obj, readBoolean(name));
-							} else if (type.equals(Byte.class)) {
-								field.set(obj, readByte(name));
-							}
-						} else if (type.isArray()) {
-							field.set(obj, readArray(name, DataTypeUtils.getDataType(field), field.get(obj)));
-						} else if (List.class.isAssignableFrom(type)) {
-							if (type.equals(ArrayList.class))
-								field.set(obj, readList((ArrayList) field.get(obj), name));
-							else if (type.equals(LinkedList.class))
-								field.set(obj, readList(new LinkedList(), name));
-							else if (type.equals(Vector.class))
-								field.set(obj, readList(new Vector(), name));
-							else if (type.equals(Stack.class))
-								field.set(obj, readList(new Stack(), name));
-							else if (type.equals(List.class))
-								field.set(obj, readList(new ArrayList(), name));
-						} else if (Set.class.isAssignableFrom(type)) {
-							if (type.equals(HashSet.class))
-								field.set(obj, readSet(new HashSet(), name));
-							else if (type.equals(TreeSet.class))
-								field.set(obj, readSet(new TreeSet(), name));
-							else if (type.equals(LinkedHashSet.class))
-								field.set(obj, readSet(new LinkedHashSet(), name));
-							else if (type.equals(Set.class))
-								field.set(obj, readSet(new HashSet(), name));
-						} else if (Map.class.isAssignableFrom(type)) {
-							if (type.equals(HashMap.class))
-								field.set(obj, readMap(new HashMap(), name));
-							else if (type.equals(Hashtable.class))
-								field.set(obj, readMap(new Hashtable(), name));
-							else if (type.equals(WeakHashMap.class))
-								field.set(obj, readMap(new WeakHashMap(), name));
-							else if (type.equals(TreeMap.class))
-								field.set(obj, readMap(new TreeMap(), name));
-							else if (type.equals(ConcurrentHashMap.class))
-								field.set(obj, readMap(new ConcurrentHashMap(), name));
-							else if (type.equals(ConcurrentSkipListMap.class))
-								field.set(obj, readMap(new ConcurrentSkipListMap(), name));
-							else if (type.equals(Map.class))
-								field.set(obj, readMap(new HashMap(), name));
-						} else if (field.get(obj) instanceof HDF5Serializable
-								&& field.getDeclaringClass() != field.getClass()) {
-							readObjectHelper(field.get(obj), name);
+						Object classObj = null;
+						try {
+							classObj = field.get(obj);
+							if (classObj == null)
+								classObj = type.newInstance();
+						} catch (IllegalAccessException | InstantiationException e) {
 						}
-					} catch (IllegalArgumentException | IllegalAccessException e) {
+						field.set(obj, readSingleObject(type, name, classObj));
+
+					} catch (IllegalAccessException e) {
 						e.printStackTrace();
 					} catch (NullPointerException e) {
-
 					}
 				}
 			}
 
+		} else {
+			String name = defaultPath + "/";
+			if (group == null || group.equals(""))
+				name += obj.getClass().getName();
+			else
+				name += group;
+			obj = readSingleObject(obj.getClass(), name, obj);
 		}
+		return obj;
+	}
+
+	@SuppressWarnings("rawtypes")
+	private Object readSingleObject(Class<?> type, String name, Object obj) {
+		if (PRIMITIVE_TYPE.contains(type)) {
+			if (type.equals(int.class)) {
+				return readInt(name);
+			} else if (type.equals(long.class)) {
+				return readLong(name);
+			} else if (type.equals(double.class)) {
+				return readDouble(name);
+			} else if (type.equals(float.class)) {
+				return readFloat(name);
+			} else if (type.equals(short.class)) {
+				return readShort(name);
+			} else if (type.equals(char.class)) {
+				return readChar(name);
+			} else if (type.equals(boolean.class)) {
+				return readBoolean(name);
+			} else if (type.equals(byte.class)) {
+				return readByte(name);
+			}
+		} else if (WRAPPER_TYPE.contains(type)) {
+			if (type.equals(Integer.class)) {
+				return readInt(name);
+			} else if (type.equals(Long.class)) {
+				return readLong(name);
+			} else if (type.equals(Double.class)) {
+				return readDouble(name);
+			} else if (type.equals(Float.class)) {
+				return readFloat(name);
+			} else if (type.equals(Short.class)) {
+				return readShort(name);
+			} else if (type.equals(Character.class)) {
+				return readChar(name);
+			} else if (type.equals(String.class)) {
+				return readString(name);
+			} else if (type.equals(Boolean.class)) {
+				return readBoolean(name);
+			} else if (type.equals(Byte.class)) {
+				return readByte(name);
+			}
+		} else if (type.isArray()) {
+			return readArray(name);
+		} else if (List.class.isAssignableFrom(type)) {
+			if (type.equals(ArrayList.class))
+				return readList(new ArrayList(), name);
+			else if (type.equals(LinkedList.class))
+				return readList(new LinkedList(), name);
+			else if (type.equals(Vector.class))
+				return readList(new Vector(), name);
+			else if (type.equals(Stack.class))
+				return readList(new Stack(), name);
+			else if (type.equals(List.class))
+				return readList(new ArrayList(), name);
+		} else if (Set.class.isAssignableFrom(type)) {
+			if (type.equals(HashSet.class))
+				return readSet(new HashSet(), name);
+			else if (type.equals(TreeSet.class))
+				return readSet(new TreeSet(), name);
+			else if (type.equals(LinkedHashSet.class))
+				return readSet(new LinkedHashSet(), name);
+			else if (type.equals(Set.class))
+				return readSet(new HashSet(), name);
+		} else if (Map.class.isAssignableFrom(type)) {
+			if (type.equals(HashMap.class))
+				return readMap(new HashMap(), name);
+			else if (type.equals(Hashtable.class))
+				return readMap(new Hashtable(), name);
+			else if (type.equals(WeakHashMap.class))
+				return readMap(new WeakHashMap(), name);
+			else if (type.equals(TreeMap.class))
+				return readMap(new TreeMap(), name);
+			else if (type.equals(ConcurrentHashMap.class))
+				return readMap(new ConcurrentHashMap(), name);
+			else if (type.equals(ConcurrentSkipListMap.class))
+				return readMap(new ConcurrentSkipListMap(), name);
+			else if (type.equals(Map.class))
+				return readMap(new HashMap(), name);
+		} else if (obj != null && obj instanceof HDF5Serializable) {
+			return readObjectHelper(obj, name);
+		}
+
+		return null;
 	}
 
 }
