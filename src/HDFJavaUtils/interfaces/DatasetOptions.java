@@ -11,9 +11,11 @@ import HDFJavaUtils.constants.DatasetConstants;
 @Target(ElementType.FIELD)
 public @interface DatasetOptions {
 	
+	long[] dims() default {-1};
 	long[] chunkDims() default {-1};
-	int gzip() default DatasetConstants.GZIP;
-	boolean isExtendible() default DatasetConstants.IS_EXTENDIBLE;
+	int gzip() default 0;
+	boolean isExtendible() default false;
+	long[] extendibleDims() default {-1};
+	double fill() default 0.0;
 	
-
 }

@@ -24,6 +24,7 @@ import HDFJavaUtils.interfaces.HDF5Serializable;
 import HDFJavaUtils.interfaces.Ignore;
 import HDFJavaUtils.interfaces.SerializeClassOptions;
 import HDFJavaUtils.interfaces.SerializeFieldOptions;
+import HDFJavaUtils.interfaces.DatasetOptions;
 import ncsa.hdf.hdf5lib.H5;
 import ncsa.hdf.hdf5lib.HDF5Constants;
 import ncsa.hdf.hdf5lib.exceptions.HDF5Exception;
@@ -54,6 +55,7 @@ public class ObjectOutputStream {
 					Float.class, Double.class, Byte.class, String.class }));
 	private static final Set<Class<?>> PRIMITIVE_TYPE = new HashSet<Class<?>>(Arrays.asList(new Class<?>[] {
 			boolean.class, char.class, int.class, short.class, long.class, float.class, double.class, byte.class }));
+	private Field globalField;
 
 	/**
 	 * Constructor for the class, the user is required to input a H5File
@@ -747,18 +749,18 @@ public class ObjectOutputStream {
 
 			for (Field field : fields) {
 				field.setAccessible(true);
+				globalField = field;
 				recursiveIterator = 0;
-				String name = "";
-				String localGroup = "";
-				Annotation anno = field.getAnnotation(SerializeFieldOptions.class);
-				SerializeFieldOptions fieldOptions = (SerializeFieldOptions) anno;
-
-				if (anno != null) {
-					name = fieldOptions.name();
-					localGroup = fieldOptions.path();
-				}
 				if (!Modifier.isTransient(field.getModifiers()) && !field.isAnnotationPresent(Ignore.class)) {
 					try {
+						String name = "";
+						String localGroup = "";
+						SerializeFieldOptions fieldOptions = field.getAnnotation(SerializeFieldOptions.class);
+
+						if (fieldOptions != null) {
+							name = fieldOptions.name();
+							localGroup = fieldOptions.path();
+						}
 						if (name == "")
 							name = field.getName();
 						if (!localGroup.equals(""))
@@ -847,10 +849,17 @@ public class ObjectOutputStream {
 	// Creates a dataset and writes data to it
 	private void writeData(Datatype type, Object data, long[] dims, String name) {
 		try {
-			Dataset dset = (H5ScalarDS) file.createScalarDS(name, null, type, dims, null, null, 0, null);
-			int dataset_id = dset.open();
-			dset.write(data);
-			dset.close(dataset_id);
+			if (globalField == null) {
+				file.createScalarDS(name, null, type, dims, null, null, 0, data);
+			} else {
+				DatasetOptions dsetOptions = globalField.getAnnotation(DatasetOptions.class);
+				if (dsetOptions == null) {
+					file.createScalarDS(name, null, type, dims, null, null, 0, data);
+				} else {
+					
+				}
+			}
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -1022,7 +1031,7 @@ public class ObjectOutputStream {
 	// Returns a converted Integer set from a character set
 	private Set<Integer> copySetCharToInt(Set<Character> set) {
 		ArrayList<Integer> list = new ArrayList<Integer>();
-		String type = set.getClass().toString();
+		Class<?> type = set.getClass();
 		Set<Integer> newSet = null;
 
 		Iterator<Character> itr = set.iterator();
@@ -1030,11 +1039,11 @@ public class ObjectOutputStream {
 			list.add((Integer) ((int) ((char) itr.next())));
 		}
 
-		if (type.equals("class java.util.HashSet")) {
+		if (type.equals(HashSet.class)) {
 			newSet = new HashSet<Integer>(list);
-		} else if (type.equals("class java.util.LinkedHashSet")) {
+		} else if (type.equals(LinkedHashSet.class)) {
 			newSet = new LinkedHashSet<Integer>(list);
-		} else if (type.equals("class java.util.TreeSet")) {
+		} else if (type.equals(TreeSet.class)) {
 			newSet = new TreeSet<Integer>(list);
 		}
 		return newSet;
@@ -1043,7 +1052,7 @@ public class ObjectOutputStream {
 	// Returns a converted Integer set from a boolean set
 	private Set<Integer> copySetBooltoInt(Set<Boolean> set) {
 		ArrayList<Integer> list = new ArrayList<Integer>();
-		String type = set.getClass().toString();
+		Class<?> type = set.getClass();
 		Set<Integer> newSet = null;
 
 		Iterator<Boolean> itr = set.iterator();
@@ -1052,11 +1061,11 @@ public class ObjectOutputStream {
 			list.add((Integer) element);
 		}
 
-		if (type.equals("class java.util.HashSet"))
+		if (type.equals(HashSet.class))
 			newSet = new HashSet<Integer>(list);
-		else if (type.equals("class java.util.LinkedHashSet"))
+		else if (type.equals(LinkedHashSet.class))
 			newSet = new LinkedHashSet<Integer>(list);
-		else if (type.equals("class java.util.TreeSet"))
+		else if (type.equals(TreeSet.class))
 			newSet = new TreeSet<Integer>(list);
 		return newSet;
 	}
@@ -1064,19 +1073,19 @@ public class ObjectOutputStream {
 	// Returns a converted integer list from a character list
 	private List<Integer> copyListCharToInt(List<Character> list) {
 		ArrayList<Integer> tempList = new ArrayList<Integer>();
-		String type = list.getClass().toString();
+		Class<?> type = list.getClass();
 		List<Integer> newList = null;
 
 		for (int i = 0; i < list.size(); i++)
 			tempList.add((Integer) ((int) ((char) list.get(i))));
 
-		if (type.equals("class java.util.ArrayList")) {
+		if (type.equals(ArrayList.class)) {
 			newList = new ArrayList<Integer>(tempList);
-		} else if (type.equals("class java.util.LinkedList")) {
+		} else if (type.equals(LinkedList.class)) {
 			newList = new LinkedList<Integer>(tempList);
-		} else if (type.equals("class java.util.Vector")) {
+		} else if (type.equals(Vector.class)) {
 			newList = new Vector<Integer>(tempList);
-		} else if (type.equals("class java.util.Stack")) {
+		} else if (type.equals(Stack.class)) {
 			newList = new Stack<Integer>();
 			newList.addAll(tempList);
 		}
@@ -1086,7 +1095,7 @@ public class ObjectOutputStream {
 	// Returns a converted integer list from a boolean list
 	private List<Integer> copyListBoolToInt(List<Boolean> list) {
 		ArrayList<Integer> tempList = new ArrayList<Integer>();
-		String type = list.getClass().toString();
+		Class<?> type = list.getClass();
 		List<Integer> newList = null;
 
 		for (int i = 0; i < list.size(); i++) {
@@ -1094,13 +1103,13 @@ public class ObjectOutputStream {
 			tempList.add((Integer) element);
 		}
 
-		if (type.equals("class java.util.ArrayList")) {
+		if (type.equals(ArrayList.class)) {
 			newList = new ArrayList<Integer>(tempList);
-		} else if (type.equals("class java.util.LinkedList")) {
+		} else if (type.equals(LinkedList.class)) {
 			newList = new LinkedList<Integer>(tempList);
-		} else if (type.equals("class java.util.Vector")) {
+		} else if (type.equals(Vector.class)) {
 			newList = new Vector<Integer>(tempList);
-		} else if (type.equals("class java.util.Stack")) {
+		} else if (type.equals(Stack.class)) {
 			newList = new Stack<Integer>();
 			newList.addAll(tempList);
 		}

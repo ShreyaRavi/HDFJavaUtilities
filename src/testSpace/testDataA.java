@@ -82,6 +82,7 @@ public class testDataA implements HDF5Serializable{
 		arrayObjectArrayTest[1] = multiArrTest;
 		arrayObjectArrayTest[2] = boolArrayTest;
 		advancedMapTest.put(collectionArrayTest, arrayObjectArrayTest);
+//		advancedMapTest.put((Object)(Integer)3, (Object)(Double)4.0);
 //		intArr = new int[3];
 //		intArr[0] = 7;
 //		intArr[1] = 1;
@@ -102,6 +103,7 @@ public class testDataA implements HDF5Serializable{
 	    for(Field field : fields) {
 	    	try {
 				returnString += " " + field.getName() + ": " + field.get(this) + "\n";
+				returnString += "" + field.get(this).getClass() + "\n";
 			} catch (IllegalArgumentException | IllegalAccessException e) {
 				e.printStackTrace();
 			}
